@@ -7,6 +7,4 @@ class Slider(Observable):
         super().__init__()
 
     def sliderposition(self, y):
-        self.notify({"slider": {
-            "position": y
-        }})
+        self.notify({"id": self.id, "position": y})
