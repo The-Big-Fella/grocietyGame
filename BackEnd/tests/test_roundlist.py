@@ -4,7 +4,7 @@ from game.rounds.round import Round
 from game.rounds.roundslist import RoundsList
 
 
-def main():
+def testRoundList():
     question1 = Question("test1", 10, 1000, 10)
     question2 = Question("test2", 10, 1000, -10)
 
@@ -24,7 +24,9 @@ def main():
     rounds.append(round2)
 
     round = rounds.getNext()
-    print(round.getEvent().getNext().question)
-
-
-main()
+    assert round.round_type == "questions"
+    questions = round.getEvent()
+    assert questions.getNext().question == "test1"
+    assert questions.getNext().question == "test2"
+    round = rounds.getNext()
+    assert round.round_type == "storm"

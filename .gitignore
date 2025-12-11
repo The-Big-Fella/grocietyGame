@@ -1,0 +1,26 @@
+# Python cache
+__pycache__/
+*/__pycache__/
+**/__pycache__/
+
+# Python compiled files
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+.env/
+.venv/
+
+# Pytest cache
+.pytest_cache/
+
+# IDE / editor files
+.vscode/
+.idea/
+
+# Build / distribution
+build/
+dist/
+*.egg-info/
