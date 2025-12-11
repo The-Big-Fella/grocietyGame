@@ -1,4 +1,4 @@
-from designpatterns.observer import Observable
+from designpaterns.observer import Observable
 from controls.button import Button
 from controls.slider import Slider
 

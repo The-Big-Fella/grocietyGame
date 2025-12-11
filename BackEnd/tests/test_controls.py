@@ -3,7 +3,7 @@ from game.questions.question import Question
 from controls.arduinoconvert import MockArduinoConverter
 
 
-def main():
+def test_controls():
     mock = MockArduinoConverter()
 
     question = Question("test", 1000, 1000, 10)
@@ -16,9 +16,5 @@ def main():
     mock.set_slider(panel_id=2, slider_id=5, position=45)
     mock.press_button(panel_id=2, is_pressed=True)
 
-    if player2.Agree(question):
-        print("player1 agrees")
-        print(player2.getSliderData())
-
-
-main()
+    assert player2.Agree(question)
+    assert player2.getSliderData() == {4: 55, 5: 45}
