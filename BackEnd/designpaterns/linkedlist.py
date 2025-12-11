@@ -4,7 +4,7 @@ class Node:
         self.next = None
 
     def __repr__(self):
-        return f"Node({self.value})"
+        return repr(self.value)
 
 
 class LinkedList:

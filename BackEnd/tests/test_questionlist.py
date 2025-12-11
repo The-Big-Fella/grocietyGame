@@ -1,10 +1,8 @@
 from game.questions.question import Question
 from game.questions.questionlist import QuestionList
-from game.rounds.round import Round
-from game.rounds.roundslist import RoundsList
 
 
-def main():
+def testQuestionsList():
     question1 = Question("test1", 10, 1000, 10)
     question2 = Question("test2", 10, 1000, -10)
 
@@ -14,7 +12,6 @@ def main():
     questionlist.append(question2)
 
     question = questionlist.getNext()
-    print(question)
-
-
-main()
+    assert question.question == "test1"
+    question = questionlist.getNext()
+    assert question.question == "test2"
