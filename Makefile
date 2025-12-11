@@ -1,9 +1,9 @@
-BACKEND_WC = "./BackEnd/"
-FRONTEND_WC = "./FrontEnd/"
-ARDUINO_WC = "./Arduino/"
+BACKEND_WC = ./BackEnd/
+FRONTEND_WC = ./FrontEnd/
+ARDUINO_WC = ./Arduino/
 
 create_venv:
-	python -m venv cd $(BACKEND_WC)venv
+	python -m venv $(BACKEND_WC)venv
 
 activate_venv:
 	source $(BACKEND_WC)venv/bin/activate
@@ -16,4 +16,7 @@ update_deps:
 
 start_backend:
 	python ${BACKEND_WC}main.py
+
+test_backend:
+	pytest $(BACKEND_WC)
 	
