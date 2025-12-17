@@ -1,12 +1,13 @@
 import time
 
 class Timer:
-    # currenttime = float(0)
-
     def __init__(self):
-        self.currenttime = time.time()
+        self.start_time = time.time()
 
-    def gettimer(self):
-        print(self.currenttime)
+    def elapsed_time(self):
+        return int(time.time() - self.start_time)
 
-    print(self.currenttime)
+    def countdown(self, count):
+        for x in range (1, count):
+            time.sleep(1)
+            print(x)
