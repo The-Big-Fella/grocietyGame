@@ -22,14 +22,15 @@ class Round:
         self.mood = mood
         self.applied_mood_events = set()
 
+
     def update(self):
         if self.state != RoundState.RUNNING:
             return
 
         elapsed = int(self.timer.elapsed_time())
-        print("Elapsed time: ", elapsed)
+        print("Round - elapsed time: ", elapsed)
 
-                # Mood penalties
+        # Mood penalties
         if elapsed in self.MOOD_EVENTS and elapsed not in self.applied_mood_events:
             self.mood += self.MOOD_EVENTS[elapsed]
             self.applied_mood_events.add(elapsed)
@@ -68,22 +69,22 @@ class Round:
         8: -5
     }
 
-    def concession_timer(self, seconds: int):
-        timer = Timer()
-        while timer.elapsed_time() < seconds:
-            time.sleep(1)
-            self.seconds+=1
-            print("Elapsed time: ",timer.elapsed_time())
-            if self.seconds in self.MOOD_EVENTS:
-                self.concessiondelay()
-        return self.mood
-
-
-    def concessiondelay(self):
-            if self.seconds in self.MOOD_EVENTS: #mood penalty & timestamps taken from dictionary MOOD_EVENTS
-                self.mood += self.MOOD_EVENTS[self.seconds]
-                print("Je hebt een moodstraf gekregen! Huidige mood:", self.mood)
-            elif self.concession_timer > self.time_limit:
-                self.mood -= 10
-                self.no_concession()
-                return
+    # def concession_timer(self, seconds: int):
+    #     timer = Timer()
+    #     while timer.elapsed_time() < seconds:
+    #         time.sleep(1)
+    #         self.seconds+=1
+    #         print("Elapsed time: ",timer.elapsed_time())
+    #         if self.seconds in self.MOOD_EVENTS:
+    #             self.concessiondelay()
+    #     return self.mood
+    #
+    #
+    # def concessiondelay(self):
+    #         if self.seconds in self.MOOD_EVENTS: #mood penalty & timestamps taken from dictionary MOOD_EVENTS
+    #             self.mood += self.MOOD_EVENTS[self.seconds]
+    #             print("Je hebt een moodstraf gekregen! Huidige mood:", self.mood)
+    #         elif self.concession_timer > self.time_limit:
+    #             self.mood -= 10
+    #             self.no_concession()
+    #             return

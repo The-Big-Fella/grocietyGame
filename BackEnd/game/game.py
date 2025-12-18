@@ -31,7 +31,7 @@ class Game:
 
     def demo_game(self):
         current_round = Round("demo", 10, self.mood)
-
+        print("Je zit nu in de game class")
         print("In de game class is je mood: ",self.mood)
 
         while current_round.state == RoundState.RUNNING:
@@ -40,4 +40,5 @@ class Game:
 
         self.mood = current_round.mood
 
+        print("Je zit nu in de game class")
         print("In de game class is je mood: ",self.mood)
