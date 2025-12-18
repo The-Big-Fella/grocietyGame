@@ -10,7 +10,8 @@ from game.rounds.roundslist import RoundsList
 
 def main():
     game = Game()
-    game.startgame()
+    game.demo_game()
+
 
 if __name__ == "__main__":
     main()
