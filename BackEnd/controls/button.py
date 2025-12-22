@@ -1,10 +1,10 @@
-from designpaterns.observer import Observable
-
-
-class Button(Observable):
+class Button:
     def __init__(self, id):
         self.id = id
-        super().__init__()
+        self.pressed = False
 
-    def is_pressed(self, is_pressed):
-        self.notify({"id": self.id, "is_pressed": is_pressed})
+    def set(self, value):
+        self.pressed = bool(int(value))
+
+    def __repr__(self):
+        return f"Button{self.id}={self.pressed}"

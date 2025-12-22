@@ -1,24 +1,25 @@
-from game.player.player import Player
-from game.questions.question import Question
-from controls.arduinoconvert import MockArduinoConverter
+from controls.mockPanel import MockPanelGUI
+import tkinter as tk
+from controls.uart import UartMock
 
 
 def main():
-    mock = MockArduinoConverter()
+    uart = UartMock()
 
-    question = Question("test", 1000, 1000, 10)
+    root = tk.Tk()
+    panel1 = MockPanelGUI(root, uart, "panel1")
+    panel2 = MockPanelGUI(root, uart, "panel2")
+    panel3 = MockPanelGUI(root, uart, "panel3")
+    panel4 = MockPanelGUI(root, uart, "panel4")
 
-    controlPanel2 = mock.panels[2]
+    def poll_uart():
+        while not uart.tx.empty():
+            msg = uart.tx.get()
+            print(f"[GUI SENT] {msg}")
+        root.after(50, poll_uart)
 
-    player2 = Player(controlPanel2)
-
-    mock.set_slider(panel_id=2, slider_id=4, position=55)
-    mock.set_slider(panel_id=2, slider_id=5, position=45)
-    mock.press_button(panel_id=2, is_pressed=True)
-
-    if player2.Agree(question):
-        print("player1 agrees")
-        print(player2.getSliderData())
+    poll_uart()
+    root.mainloop()
 
 
 main()

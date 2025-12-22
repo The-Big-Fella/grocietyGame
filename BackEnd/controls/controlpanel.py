@@ -1,39 +1,25 @@
-from designpaterns.observer import Observable
-from controls.button import Button
 from controls.slider import Slider
+from controls.button import Button
 
 
-class ControlPanel(Observable):
-    # ControlPanel(1, [1,2], 3)
-    def __init__(self, control_panel_id, slider_ids, button_id):
-        super().__init__()
-        self.sliders = self.initialize_slider(slider_ids)
-        self.button = Button(button_id)
-        self.button.subscribe(self.ButtonHandler)
+class ControlPanel:
+    def __init__(self, uart, panel_id):
+        self.uart = uart
+        self.panel_id = panel_id
+        self.slider_1 = Slider(1)
+        self.slider_2 = Slider(2)
+        self.slider_3 = Slider(3)
+        self.button = Button(1)
 
-    def SubscribeButton(self, clb):
-        self.button.subscribe(clb)
+    def handle_message(self, key, value):
+        if key == "SLDR1":
+            self.slider_1.set(value)
+        elif key == "SLDR2":
+            self.slider_2.set(value)
+        elif key == "SLDR3":
+            self.slider_3.set(value)
+        elif key == "BTN":
+            self.button.set(value)
 
-    def SubscribeSliders(self, clb):
-        for slider in self.sliders:
-            slider.subscribe(clb)
-
-    def getSliders(self):
-        return self.sliders
-
-    def ButtonHandler(self, event):
-        # handle button updates within control panel
-        ...
-
-    def SliderHandler(self, event):
-        # handle slider updates within control panel
-        ...
-
-    def initialize_slider(self, slider_ids):
-        sliders = []
-        for id in slider_ids:
-            slider = Slider(id)
-            slider.subscribe(self.SliderHandler)
-            sliders.append(slider)
-
-        return sliders
+    def __repr__(self):
+        return f"{self.slider_1}, {self.slider_2}, {self.slider_3}, {self.button}"

@@ -1,22 +1,23 @@
 BACKEND_WC = ./BackEnd/
-FRONTEND_WC = ./FrontEnd/
-ARDUINO_WC = ./Arduino/
+VENV = $(BACKEND_WC)venv
+PYTHON = $(VENV)/bin/python
+PIP = $(VENV)/bin/pip
 
 create_venv:
-	python -m venv $(BACKEND_WC)venv
+	python3 -m venv $(VENV)
 
-activate_venv:
-	source $(BACKEND_WC)venv/bin/activate
-
-install_deps:
-	pip install -r $(BACKEND_WC)requirments.txt
+install_deps: create_venv
+	$(PIP) install -r $(BACKEND_WC)requirements.txt
 
 update_deps:
-	pip freeze > $(BACKEND_WC)requirments.txt
+	$(PIP) freeze > $(BACKEND_WC)requirements.txt
 
 start_backend:
-	python ${BACKEND_WC}main.py
+	$(PYTHON) $(BACKEND_WC)main.py
 
 test_backend:
-	pytest $(BACKEND_WC)
+	$(PYTHON) -m pytest $(BACKEND_WC)
+
+shell: create_venv
+	@bash --rcfile <(echo "source $(VENV)/bin/activate; PS1='(venv) $$PS1'") -i
 	
