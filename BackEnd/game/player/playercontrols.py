@@ -1,11 +1,10 @@
 from designpaterns.observer import Observer
-from controls.controlpanel import ControlPanel
 
 
 class PlayerControls(Observer):
     # Controller (1,2,3 of 4)
     def __init__(self, controller):
-        self.controlPanel = ControlPanel(controller)
+        self.controlPanel = controller
 
         self.controlPanel.SubscribeButton(self.handleButton)
         self.controlPanel.SubscribeSliders(self.handleSlider)

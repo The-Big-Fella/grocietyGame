@@ -1,30 +1,25 @@
-from game.questions.question import Question
-from game.questions.questionlist import QuestionList
-from game.rounds.round import Round
-from game.rounds.roundslist import RoundsList
+from controls.mockPanel import MockPanelGUI
+import tkinter as tk
+from controls.uart import UartMock
 
 
 def main():
-    question1 = Question("test1", 10, 1000, 10)
-    question2 = Question("test2", 10, 1000, -10)
+    uart = UartMock()
 
-    questionlist = QuestionList()
+    root = tk.Tk()
+    panel1 = MockPanelGUI(root, uart, "panel1")
+    panel2 = MockPanelGUI(root, uart, "panel2")
+    panel3 = MockPanelGUI(root, uart, "panel3")
+    panel4 = MockPanelGUI(root, uart, "panel4")
 
-    questionlist.append(question1)
-    questionlist.append(question2)
+    def poll_uart():
+        while not uart.tx.empty():
+            msg = uart.tx.get()
+            print(f"[GUI SENT] {msg}")
+        root.after(50, poll_uart)
 
-    round1 = Round("questions")
-    round2 = Round("storm")
-
-    round1.addEvent(questionlist)
-    round2.addEvent(questionlist)
-
-    rounds = RoundsList()
-    rounds.append(round1)
-    rounds.append(round2)
-
-    round = rounds.getNext()
-    print(round.getEvent().getNext().question)
+    poll_uart()
+    root.mainloop()
 
 
 main()

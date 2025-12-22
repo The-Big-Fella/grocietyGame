@@ -13,4 +13,4 @@ class Observable():
     def notify(self, event):
         for observer in self.observers:
             if callable(observer):
-                observer()
+                observer(event)

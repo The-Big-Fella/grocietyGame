@@ -1,10 +1,10 @@
-from designpaterns.observer import Observable
-
-
-class Slider(Observable):
+class Slider:
     def __init__(self, id):
         self.id = id
-        super().__init__()
+        self.value = 0
 
-    def sliderposition(self, y):
-        self.notify({"id": self.id, "position": y})
+    def set(self, value):
+        self.value = int(value)
+
+    def __repr__(self):
+        return f"Slider{self.id}={self.value}"
