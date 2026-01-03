@@ -1,39 +1,40 @@
-from designpatterns.observer import Observable
-from controls.button import Button
-from controls.slider import Slider
+class Controller:
+    """Represents a controller with 3 sliders and 1 button."""
+
+    def __init__(self, controller_id: int):
+        self.controller_id = controller_id
+        self.sliders = [0, 0, 0]  # sliders 0..2
+        self.button = 0            # state button
+
+    def update_from_controls(self, controls: dict):
+        """Update sliders and button from decoded packet dictionary."""
+        self.sliders = [controls.get(i, 0) for i in range(3)]
+        self.button = controls.get(3, 0)
+
+    def __repr__(self):
+        return f"<Controller {self.controller_id} sliders={self.sliders} button={self.button}>"
 
 
-class ControlPanel(Observable):
-    # ControlPanel(1, [1,2], 3)
-    def __init__(self, control_panel_id, slider_ids, button_id):
-        super().__init__()
-        self.sliders = self.initialize_slider(slider_ids)
-        self.button = Button(button_id)
-        self.button.subscribe(self.ButtonHandler)
+class ControllerManager:
+    """
+    Maintains Controller instances.
+    Updates them when given decoded packets from TranslationLayer.
+    """
 
-    def SubscribeButton(self, clb):
-        self.button.subscribe(clb)
+    def __init__(self):
+        self.controllers: dict[int, Controller] = {}
 
-    def SubscribeSliders(self, clb):
-        for slider in self.sliders:
-            slider.subscribe(clb)
+    def update_from_packet(self, controller_id: int, controls: dict):
+        """
+        Call this whenever a decoded packet is available.
+        Creates a Controller object if necessary.
+        """
+        if controller_id not in self.controllers:
+            self.controllers[controller_id] = Controller(controller_id)
+        self.controllers[controller_id].update_from_controls(controls)
 
-    def getSliders(self):
-        return self.sliders
+    def get_controller(self, controller_id: int):
+        return self.controllers.get(controller_id)
 
-    def ButtonHandler(self, event):
-        # handle button updates within control panel
-        ...
-
-    def SliderHandler(self, event):
-        # handle slider updates within control panel
-        ...
-
-    def initialize_slider(self, slider_ids):
-        sliders = []
-        for id in slider_ids:
-            slider = Slider(id)
-            slider.subscribe(self.SliderHandler)
-            sliders.append(slider)
-
-        return sliders
+    def all_controllers(self):
+        return list(self.controllers.values())
