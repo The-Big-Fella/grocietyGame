@@ -16,12 +16,12 @@ class TranslationLayer():
         result = self.decode_packet_stream(self.buffer)
         if result:
             controller_id, controls, packet_len = result
-            print("Controller:", controller_id, "Controls:", controls)
             return controller_id, controls, packet_len
 
     def decode_packet_stream(self, buffer: bytearray):
         i = 0
-        while i <= len(buffer) - 2:  # need at least SYNC+Controller+Count
+        # need at least SYNC+Controller+Count to start reading the buffer
+        while i <= len(buffer) - 2:
             if buffer[i] != SYNC:
                 i += 1
                 continue
@@ -32,10 +32,8 @@ class TranslationLayer():
             packet_len = 3 + count * 2  # full packet length
 
             if i + packet_len > len(buffer):
-                # Not enough data yet
                 break
 
-            # Extract controls
             controls = {}
             offset = i + 3
             for _ in range(count):

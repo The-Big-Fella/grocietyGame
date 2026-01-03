@@ -61,9 +61,10 @@ class MockDevice:
 
         # Shared slider state (single source of truth)
         self.slider_vars = [tk.IntVar(value=0) for _ in range(3)]
-        for i, var in enumerate(self.slider_vars):
-            var.trace_add("write", lambda *_,
-                          idx=i: self.on_slider_change(idx))
+
+        # Trace changes without needing an index
+        for var in self.slider_vars:
+            var.trace_add("write", lambda *_: self.on_slider_change())
 
         self.panels = []
         self.last_states = []
@@ -82,10 +83,8 @@ class MockDevice:
 
         self.schedule_send()
 
-    # Called when ANY slider changes
-    def on_slider_change(self, index):
+    def on_slider_change(self):
         self.consensus_invalidated = True
-        # self.send_all()
 
     def button_pressed(self, controller_id, state):
         panel = self.panels[controller_id]
