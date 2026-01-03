@@ -1,0 +1,2 @@
+mock-serial==0.0.1
+pyserial==3.5

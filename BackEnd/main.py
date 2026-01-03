@@ -1,30 +1,38 @@
-from game.questions.question import Question
-from game.questions.questionlist import QuestionList
-from game.rounds.round import Round
-from game.rounds.roundslist import RoundsList
+from controls.translationlayer import TranslationLayer
+from controls.controlpanel import ControllerManager
+
+translationlayer = TranslationLayer("/dev/ttyV1", 9600)
+manager = ControllerManager()
 
 
 def main():
-    question1 = Question("test1", 10, 1000, 10)
-    question2 = Question("test2", 10, 1000, -10)
+    import time
 
-    questionlist = QuestionList()
+    print("Starting translation layer + controller manager")
 
-    questionlist.append(question1)
-    questionlist.append(question2)
+    while True:
+        # Read from serial and decode packet
+        controller_update()
 
-    round1 = Round("questions")
-    round2 = Round("storm")
-
-    round1.addEvent(questionlist)
-    round2.addEvent(questionlist)
-
-    rounds = RoundsList()
-    rounds.append(round1)
-    rounds.append(round2)
-
-    round = rounds.getNext()
-    print(round.getEvent().getNext().question)
+        # Small sleep to avoid busy loop (optional, depends on your game loop)
+        time.sleep(0.001)
 
 
-main()
+def controller_update():
+    result = translationlayer.update()  # this updates internal buffer
+
+    if result:
+        controller_id, controls, packet_len = result
+
+        # Update ControllerManager with decoded data
+        manager.update_from_packet(controller_id, controls)
+
+        # Example: print controller state
+        c = manager.get_controller(controller_id)
+        if c:
+            print(f"Controller {c.controller_id} sliders={
+                c.sliders} button={c.button}")
+
+
+if __name__ == "__main__":
+    main()
