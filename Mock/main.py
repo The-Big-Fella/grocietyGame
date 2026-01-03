@@ -1,36 +1,55 @@
+
 import tkinter as tk
 from serial import Serial
 
-SERIAL_PORT = "/dev/ttyV0"  # socat PTY
+SERIAL_PORT = "/dev/ttyV0"   # socat PTY
 BAUDRATE = 9600
-SEND_INTERVAL_MS = 1
+SEND_INTERVAL_MS = 50
 SYNC = 0xAA
 
 
 class ControlPanel(tk.Frame):
-    def __init__(self, master, controller_id):
+    def __init__(self, master, controller_id, slider_vars, button_cb):
         super().__init__(master, borderwidth=2, relief="groove")
         self.controller_id = controller_id
+        self.slider_vars = slider_vars
+        self.button_cb = button_cb
 
         tk.Label(self, text=f"Controller {controller_id}").pack()
 
+        # Shared sliders
         self.sliders = []
         for i in range(3):
-            s = tk.Scale(self, from_=0, to=255, orient="horizontal")
+            s = tk.Scale(
+                self,
+                from_=0,
+                to=255,
+                orient="horizontal",
+                variable=self.slider_vars[i],
+                resolution=1,
+                showvalue=True
+            )
             s.pack(fill="x")
             self.sliders.append(s)
 
+        # Per-controller button
         self.button_state = tk.IntVar(value=0)
         self.button = tk.Checkbutton(
-            self, text="Button", variable=self.button_state
+            self,
+            text="Confirm",
+            variable=self.button_state,
+            command=self.on_button
         )
         self.button.pack()
 
+    def on_button(self):
+        self.button_cb(self.controller_id, self.button_state.get())
+
     def get_controls(self):
         return {
-            0: self.sliders[0].get(),
-            1: self.sliders[1].get(),
-            2: self.sliders[2].get(),
+            0: self.slider_vars[0].get(),
+            1: self.slider_vars[1].get(),
+            2: self.slider_vars[2].get(),
             3: self.button_state.get(),
         }
 
@@ -40,15 +59,39 @@ class MockDevice:
         self.root = root
         self.serial = Serial(SERIAL_PORT, BAUDRATE, timeout=0)
 
+        # Shared slider state (single source of truth)
+        self.slider_vars = [tk.IntVar(value=0) for _ in range(3)]
+        for i, var in enumerate(self.slider_vars):
+            var.trace_add("write", lambda *_,
+                          idx=i: self.on_slider_change(idx))
+
         self.panels = []
-        self.last_states = []  # Track last sent state
+        self.last_states = []
+        self.consensus_invalidated = False
+
         for i in range(4):
-            panel = ControlPanel(root, i)
+            panel = ControlPanel(
+                root,
+                i,
+                self.slider_vars,
+                self.button_pressed
+            )
             panel.pack(side="left", padx=5, pady=5)
             self.panels.append(panel)
-            self.last_states.append({})  # empty dict initially
+            self.last_states.append({})
 
         self.schedule_send()
+
+    # Called when ANY slider changes
+    def on_slider_change(self, index):
+        self.consensus_invalidated = True
+        # self.send_all()
+
+    def button_pressed(self, controller_id, state):
+        panel = self.panels[controller_id]
+        packet = self.build_packet(panel)
+        self.serial.write(packet)
+        self.last_states[controller_id] = panel.get_controls().copy()
 
     def schedule_send(self):
         self.send_all()
@@ -58,10 +101,9 @@ class MockDevice:
         for i, panel in enumerate(self.panels):
             current = panel.get_controls()
             if current != self.last_states[i]:
-                # State changed, send packet
                 packet = self.build_packet(panel)
                 self.serial.write(packet)
-                self.last_states[i] = current.copy()  # update last sent
+                self.last_states[i] = current.copy()
 
     def build_packet(self, panel):
         controls = panel.get_controls()

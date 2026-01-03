@@ -11,6 +11,15 @@ class Controller:
         self.sliders = [controls.get(i, 0) for i in range(3)]
         self.button = controls.get(3, 0)
 
+    def get_controller_id(self):
+        return self.controller_id
+
+    def get_slider_data(self):
+        return self.sliders
+
+    def get_button_state(self):
+        return bool(self.button)
+
     def __repr__(self):
         return f"<Controller {self.controller_id} sliders={self.sliders} button={self.button}>"
 
@@ -23,6 +32,19 @@ class ControllerManager:
 
     def __init__(self):
         self.controllers: dict[int, Controller] = {}
+
+    def getControllers(self):
+        return self.controllers
+
+    def check_consensus(self):
+        consensus = False
+        for key in self.controllers:
+            controller = self.controllers.get(key)
+            consensus = bool(controller.get_button_state())
+            if not consensus:
+                return False
+
+        return consensus
 
     def update_from_packet(self, controller_id: int, controls: dict):
         """
