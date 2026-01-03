@@ -7,7 +7,7 @@ class TranslationLayer():
     def __init__(self, device, baudrate):
         self.device = device
         self.baudrate = baudrate
-        self.serial = Serial(device, baudrate=baudrate, timeout=1)
+        self.serial = Serial(device, baudrate=baudrate, timeout=.01)
         self.buffer = bytearray()
 
     def update(self):
@@ -17,36 +17,23 @@ class TranslationLayer():
         if result:
             controller_id, controls, packet_len = result
             return controller_id, controls, packet_len
-            # print("Controller:", controller_id, "Controls:", controls)
 
     def decode_packet_stream(self, buffer: bytearray):
-        """
-        Continuously scan the buffer for a packet starting with SYNC (0xAA).
-        Returns:
-            (controller_id, controls, packet_len) if a full packet is available
-            None if not enough data yet
-        """
-        # Loop until buffer is empty or a full packet is found
         i = 0
-        while i <= len(buffer) - 3:  # need at least SYNC+Controller+Count
+        # need at least SYNC+Controller+Count to start reading the buffer
+        while i <= len(buffer) - 2:
             if buffer[i] != SYNC:
                 i += 1
                 continue
 
-            # Found potential SYNC at position i
-            if i + 3 > len(buffer):
-                # Not enough bytes for header yet
-                break
-
+            # Potential packet header found
             controller_id = buffer[i + 1]
             count = buffer[i + 2]
-            packet_len = 3 + count * 2  # SYNC + Controller + Count + Controls
+            packet_len = 3 + count * 2  # full packet length
 
             if i + packet_len > len(buffer):
-                # Full packet not yet received
                 break
 
-            # Extract controls
             controls = {}
             offset = i + 3
             for _ in range(count):
@@ -60,7 +47,6 @@ class TranslationLayer():
 
             return controller_id, controls, packet_len
 
-# No full packet found yet
-# Remove all bytes before the next potential SYNC to avoid buffer bloat
+        # No full packet found, remove bytes before next possible SYNC
         del buffer[:i]
         return None

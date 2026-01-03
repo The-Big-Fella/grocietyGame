@@ -13,8 +13,8 @@ def testRoundList():
     questionlist.append(question1)
     questionlist.append(question2)
 
-    round1 = Round("questions")
-    round2 = Round("storm")
+    round1 = Round(0, "questions")
+    round2 = Round(1, "storm")
 
     round1.addEvent(questionlist)
     round2.addEvent(questionlist)

@@ -2,8 +2,9 @@ from designpaterns.linkedlist import Node
 
 
 class Round(Node):
-    def __init__(self, round_type):
+    def __init__(self, id, round_type):
         super().__init__(self)
+        self.id = id
         self.round_type = round_type
         self.event = None
 

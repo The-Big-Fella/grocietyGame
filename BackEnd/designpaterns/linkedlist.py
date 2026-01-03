@@ -66,11 +66,10 @@ class LinkedList:
             yield current
             current = current.next
 
-    # For debug printing
     def __repr__(self):
         values = []
         cur = self.head
         while cur:
-            values.append(repr(cur.value))
+            values.append(repr(cur.value))  # value itself, not the node
             cur = cur.next
-        return "LinkedList([" + ", ".join(values) + "])"
+        return f"LinkedList([{', '.join(values)}])"

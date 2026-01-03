@@ -37,3 +37,7 @@ Each control entry consists of exactly 2 bytes:
 +------------+------------+
 
 example : `\xAA\x00\x04\x00\x00\x01\x00\x02\x00\x03\x00`
+
+`sudo socat -d -d \                                                        INT ✘ 
+  PTY,link=/dev/ttyV0,raw,echo=0 \
+  PTY,link=/dev/ttyV1,raw,echo=0`
