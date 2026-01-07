@@ -2,16 +2,21 @@
 
 
 ## BackEnd
-- start backend : `make start_backend`
 
-### backend setup
-- create a virtual venv `make create_venv`
-- activate virtual venv `make activate_venv`
-- install deps `make install_deps`
+### Start the backend
 
-### update deps
-when installed new dep update the dependencies
-- update deps `make update_deps`
+```bash
+make shell 
+
+make install_deps
+
+# mocking the backend
+make start_mock_backend
+
+# start the normal backend
+make start_backend
+```
+
 
 
 # protocol
@@ -22,22 +27,29 @@ when installed new dep update the dependencies
 
 Each packet represents the full state of a single controller.
 
-+-----------+-----------+--------------------------------------+
 | Sync      | Controller | Control    | Control Entries        |
+|-----------|------------|------------|------------------------|
 | SYNC (1B) |ID (1B)     | Count (1B) | (2 bytes each)         |
-+-----------+-----------+--------------------------------------+
 
 ### Control Entry Format
 
 Each control entry consists of exactly 2 bytes:
 
-+------------+------------+
 | Control ID | Value      |
+|------------|------------|
 | (1 byte)   | (1 byte)   |
-+------------+------------+
 
-example : `\xAA\x00\x04\x00\x00\x01\x00\x02\x00\x03\x00`
+### example packet : 
 
-`sudo socat -d -d \                                                        INT ✘ 
+`\xAA\x00\x04\x00\x00\x01\x00\x02\x00\x03\x00`
+
+### mocking
+
+to mock the serial communication between the controller and the grocietyGame
+we use socat. in the `make start_mock_backend` commando
+
+```bash
+sudo socat -d -d \
   PTY,link=/dev/ttyV0,raw,echo=0 \
-  PTY,link=/dev/ttyV1,raw,echo=0`
+  PTY,link=/dev/ttyV1,raw,echo=0
+```
