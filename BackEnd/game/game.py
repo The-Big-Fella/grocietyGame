@@ -47,8 +47,7 @@ class Game ():
                 print("No more rounds!")
                 return
             self.currentRoundId = self.currentRound.id
-            print(f"\n=== Starting Round {self.currentRoundId} ({
-                  self.currentRound.round_type}) ===")
+            print(f"\n=== Starting Round {self.currentRoundId} ({self.currentRound.round_type}) ===")
 
             # Display the questions if this round has a question event
             event = self.currentRound.getEvent()
