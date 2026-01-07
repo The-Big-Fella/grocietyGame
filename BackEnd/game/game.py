@@ -94,3 +94,11 @@ class Game:
         self.state = "finished"
         self.controls.reset_all()
         print("\nGame finished")
+
+    def decrease_mood(self, amount: int):
+        #mood verwijderen
+        self.mood = max(0, self.mood - amount)
+
+    def increase_mood(self, amount: int):
+        #mood kunnen increasen mochten we dat nog toe willen voegen
+        self.mood = min(100, self.mood + amount)
