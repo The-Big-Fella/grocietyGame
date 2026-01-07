@@ -4,33 +4,33 @@ from controls.translationlayer import TranslationLayer
 from controls.controlpanel import ControllerManager
 from game.game import Game
 
-translationlayer = TranslationLayer("/tmp/ttyV1", 9600)
-manager = ControllerManager()
-game = Game(manager)
-game.start_game()
+
+class App:
+    def __init__(self):
+        self.io = TranslationLayer("/tmp/ttyV1", 9600)
+
+        self.controllers = ControllerManager(io=self.io)
+
+        self.game = Game(control_manager=self.controllers)
+
+    def controller_update(self):
+        result = self.io.update()
+        if result:
+            cid, controls, _ = result
+            self.controllers.update_from_packet(cid, controls)
+
+    def run(self):
+        self.game.start_game()
+
+        while True:
+            self.controller_update()
+            self.game.update()
+            time.sleep(0.001)
 
 
 def main():
-    running = True
-    while running:
-        controller_update()
-        game.update()
-
-        time.sleep(0.001)
-
-
-def controller_update():
-    result = translationlayer.update()
-
-    if result:
-        controller_id, controls, packet_len = result
-
-        manager.update_from_packet(controller_id, controls)
-
-        # c = manager.get_controller(controller_id)
-        # if c:
-        #    print(f"Controller {c.controller_id} sliders={
-        #        c.sliders} button={c.button}")
+    app = App()
+    app.run()
 
 
 if __name__ == "__main__":

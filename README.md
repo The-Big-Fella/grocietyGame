@@ -27,9 +27,9 @@ make start_backend
 
 Each packet represents the full state of a single controller.
 
-| Sync      | Controller | Control    | Control Entries        |
-|-----------|------------|------------|------------------------|
-| SYNC (1B) |ID (1B)     | Count (1B) | (2 bytes each)         |
+| Sync      | msg      | Controller | Control    | Control Entries        |
+|-----------|----------|------------|------------|------------------------|
+| SYNC (1B) |TYPE (1B) |ID (1B)     | Count (1B) | (2 bytes each)         |
 
 ### Control Entry Format
 
@@ -41,7 +41,7 @@ Each control entry consists of exactly 2 bytes:
 
 ### example packet : 
 
-`\xAA\x00\x04\x00\x00\x01\x00\x02\x00\x03\x00`
+`\xAA\0x00\cx00\x04\x00\x00\x01\x00\x02\x00\x03\x00`
 
 ### mocking
 

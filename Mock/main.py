@@ -6,6 +6,9 @@ SERIAL_PORT = "/tmp/ttyV0"   # socat PTY
 BAUDRATE = 9600
 SEND_INTERVAL_MS = 50
 SYNC = 0xAA
+MSG = 0x00
+MSG_RESET = 0x01
+CONTROLLER_ALL = 0xFF
 
 
 class ControlPanel(tk.Frame):
@@ -53,6 +56,19 @@ class ControlPanel(tk.Frame):
             3: self.button_state.get(),
         }
 
+    def reset(self):
+        # Reset sliders
+        for var in self.slider_vars:
+            var.set(0)
+
+        # Reset button
+        self.button_state.set(0)
+
+    def reset_controller(self, cid):
+        print(f"RESET CONTROLLER {cid}")
+        self.controllers.pop(cid, None)
+        self.redraw_ui()
+
 
 class MockDevice:
     def __init__(self, root):
@@ -66,9 +82,10 @@ class MockDevice:
         for var in self.slider_vars:
             var.trace_add("write", lambda *_: self.on_slider_change())
 
-        self.panels = []
+        self.panels = {}
         self.last_states = []
         self.consensus_invalidated = False
+        self.rx_buffer = bytearray()
 
         for i in range(4):
             panel = ControlPanel(
@@ -78,10 +95,11 @@ class MockDevice:
                 self.button_pressed
             )
             panel.pack(side="left", padx=5, pady=5)
-            self.panels.append(panel)
+            self.panels[i] = panel
             self.last_states.append({})
 
         self.schedule_send()
+        self.schedule_read()
 
     def on_slider_change(self):
         self.consensus_invalidated = True
@@ -96,8 +114,65 @@ class MockDevice:
         self.send_all()
         self.root.after(SEND_INTERVAL_MS, self.schedule_send)
 
+    def schedule_read(self):
+        try:
+            data = self.serial.read(self.serial.in_waiting or 1)
+            # print(data)
+            if data:
+                self.rx_buffer.extend(data)
+        except Exception as e:
+            print("Serial error:", e)
+            return
+
+        while True:
+            controller_id = self.parse_reset(self.rx_buffer)
+            if controller_id is None:
+                break
+
+            self.handle_reset(controller_id)
+
+        self.root.after(10, self.schedule_read)
+
+    def handle_reset(self, controller_id):
+        if controller_id == 0xFF:
+            for controller_id in self.panels:
+                self.reset_controller(controller_id)
+        else:
+            self.reset_controller(controller_id)
+
+    def reset_controller(self, cid):
+        print(f"RESET CONTROLLER {cid}")
+        panel = self.panels.get(cid)
+        if panel:
+            panel.reset()
+
+    def parse_reset(self, buffer: bytearray):
+        i = 0
+
+        while i <= len(buffer) - 4:
+            if buffer[i] != SYNC:
+                i += 1
+                continue
+
+            msg_type = buffer[i + 1]
+
+            # Only care about RESET for now
+            if msg_type != MSG_RESET:
+                i += 1
+                continue
+
+            controller_id = buffer[i + 2]
+
+            # Reset packet is always 4 bytes
+            del buffer[i:i + 4]
+
+            return controller_id
+
+        return None
+
     def send_all(self):
-        for i, panel in enumerate(self.panels):
+        for i in self.panels:
+            panel = self.panels.get(i)
             current = panel.get_controls()
             if current != self.last_states[i]:
                 packet = self.build_packet(panel)
@@ -109,6 +184,7 @@ class MockDevice:
         packet = bytearray()
 
         packet.append(SYNC)
+        packet.append(MSG)
         packet.append(panel.controller_id)
         packet.append(len(controls))
 
