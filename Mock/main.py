@@ -2,7 +2,7 @@
 import tkinter as tk
 from serial import Serial
 
-SERIAL_PORT = "/dev/ttyV0"   # socat PTY
+SERIAL_PORT = "/tmp/ttyV0"   # socat PTY
 BAUDRATE = 9600
 SEND_INTERVAL_MS = 50
 SYNC = 0xAA

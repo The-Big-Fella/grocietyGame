@@ -4,7 +4,7 @@ from controls.translationlayer import TranslationLayer
 from controls.controlpanel import ControllerManager
 from game.game import Game
 
-translationlayer = TranslationLayer("/dev/ttyV1", 9600)
+translationlayer = TranslationLayer("/tmp/ttyV1", 9600)
 manager = ControllerManager()
 game = Game(manager)
 game.start_game()
