@@ -22,29 +22,35 @@ class Controller:
 
 
 class ControllerManager:
-    def __init__(self):
+    def __init__(self, io):
+        self.io = io
         self.controllers: dict[int, Controller] = {}
 
-    def getControllers(self):
+    def get_controllers(self):
         return self.controllers
-
-    def check_consensus(self):
-        consensus = False
-        for key in self.controllers:
-            controller = self.controllers.get(key)
-            consensus = bool(controller.get_button_state())
-            if not consensus:
-                return False
-
-        return consensus
-
-    def update_from_packet(self, controller_id: int, controls: dict):
-        if controller_id not in self.controllers:
-            self.controllers[controller_id] = Controller(controller_id)
-        self.controllers[controller_id].update_from_controls(controls)
 
     def get_controller(self, controller_id: int):
         return self.controllers.get(controller_id)
 
     def all_controllers(self):
         return list(self.controllers.values())
+
+    def check_consensus(self):
+        if not self.controllers:
+            return False
+        for controller in self.controllers.values():
+            if not controller.get_button_state():
+                return False
+        return True
+
+    def update_from_packet(self, controller_id: int, controls: dict):
+        if controller_id not in self.controllers:
+            self.controllers[controller_id] = Controller(controller_id)
+        self.controllers[controller_id].update_from_controls(controls)
+
+    def reset_all(self):
+        for controller in self.controllers.values():
+            controller.sliders = [0, 0, 0]
+            controller.button = 0
+        # broadcast reset
+        self.io.send_reset()
