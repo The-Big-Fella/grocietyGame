@@ -1,11 +1,11 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, send_from_directory
 
 from game.questions.questionlist import QuestionList
 
 
 class ApiServer(Flask):
     def __init__(self, app):
-        super().__init__(__name__)
+        super().__init__(__name__, static_folder="./static/")
 
         self.app = app
 
@@ -14,6 +14,11 @@ class ApiServer(Flask):
 
         self.add_url_rule("/getcurrentround", "get_round_state",
                           self.getRoundState)
+
+        self.add_url_rule("/", "index", self.index)
+
+    def index(self):
+        return send_from_directory(self.static_folder, "index.html")
 
     def getControllerState(self):
         controllers = self.app.controllers.get_controllers()
@@ -31,8 +36,10 @@ class ApiServer(Flask):
     def getRoundState(self):
         round = self.app.game.current_round
 
-        event = round.getEvent()
+        if not round:
+            return jsonify()
 
+        event = round.getEvent()
         questions = []
         roundstate = {}
         if isinstance(event, QuestionList):

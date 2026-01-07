@@ -19,7 +19,7 @@ class Game:
     def start_game(self):
         self._build_rounds()
         self.state = "running"
-        self.current_round = None
+        self.current_round = self.rounds.getNext()
 
         # Reset controllers at game start
         self.controls.reset_all()
