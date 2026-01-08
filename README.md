@@ -17,6 +17,8 @@ make start_mock_backend
 make start_backend
 ```
 
+after starting the backend, you can go to `localhost:5000`
+
 
 
 # protocol
