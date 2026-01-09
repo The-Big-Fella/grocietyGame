@@ -15,6 +15,9 @@ class ApiServer(Flask):
         self.add_url_rule("/getcurrentround", "get_round_state",
                           self.getRoundState)
 
+        self.add_url_rule("/getgamestate", "get_game_state",
+                          self.getGameState)
+
         self.add_url_rule("/", "index", self.index)
 
     def index(self):
@@ -58,3 +61,15 @@ class ApiServer(Flask):
             }
 
         return jsonify(roundstate)
+
+    def getGameState(self):
+        game = self.app.game
+        print(game)
+
+        state = {
+            "state": game.state,
+            "mood": game.mood,
+            "budget": game.budget
+        }
+
+        return jsonify(state)
