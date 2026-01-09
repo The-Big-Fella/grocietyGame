@@ -2,7 +2,7 @@ from game.questions.question import Question
 from game.questions.questionlist import QuestionList
 from game.rounds.round import Round
 from game.rounds.roundslist import RoundsList
-
+from game.mood_handler import MoodDecay
 
 class Game:
     def __init__(self, control_manager):
@@ -16,13 +16,17 @@ class Game:
 
         self.state = "idle"
 
+        self.mood_decay = MoodDecay(self)
+
     def start_game(self):
         self._build_rounds()
         self.state = "running"
         self.current_round = self.rounds.getNext()
 
-        # Reset controllers at game start
         self.controls.reset_all()
+
+        self.mood_decay.start()
+        self.mood_decay.start_round() #eerste round starten
 
         print("Game started")
 
@@ -74,6 +78,8 @@ class Game:
             self._end_game()
             return
 
+        self.mood_decay.start_round()
+
         print(
             f"\n=== Starting Round {self.current_round.id} "
             f"({self.current_round.round_type}) ==="
@@ -93,4 +99,7 @@ class Game:
     def _end_game(self):
         self.state = "finished"
         self.controls.reset_all()
+
+        self.mood_decay.stop()
+
         print("\nGame finished")
