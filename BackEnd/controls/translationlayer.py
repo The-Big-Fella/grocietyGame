@@ -18,7 +18,6 @@ class TranslationLayer():
         result = self.decode_packet_stream(self.buffer)
         if result:
             controller_id, controls, packet_len = result
-            print(result)
             return controller_id, controls, packet_len
 
     def send_reset(self):

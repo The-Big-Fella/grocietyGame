@@ -1,6 +1,7 @@
 import time
 import threading
 
+
 class MoodDecay:
     def __init__(self, game, post_penalty_delay=30, post_penalty_amount=10):
         self.game = game
@@ -32,6 +33,8 @@ class MoodDecay:
 
             elapsed = time.monotonic() - self.start_time
 
+            print(elapsed)
+
             # Apply all scheduled penalties
             while (
                 self.next_index < len(self.timeline)
@@ -54,8 +57,10 @@ class MoodDecay:
                 post_elapsed = time.monotonic() - self.post_penalty_start_time
                 if post_elapsed >= self.post_penalty_delay:
                     # Apply extra mood penalty
-                    self.game.mood = max(0, self.game.mood - self.post_penalty_amount)
-                    print(f"[MoodDecay] Post-penalty applied → mood {self.game.mood}")
+                    self.game.mood = max(
+                        0, self.game.mood - self.post_penalty_amount)
+                    print(
+                        f"[MoodDecay] Post-penalty applied → mood {self.game.mood}")
 
                     # Automatically end the round if still active
                     if self.game.current_round is not None:
@@ -69,6 +74,8 @@ class MoodDecay:
             time.sleep(0.1)
 
     def start(self):
+
+        print("[MoodDecay] start")
         if not self.running:
             self.running = True
             self.thread = threading.Thread(
