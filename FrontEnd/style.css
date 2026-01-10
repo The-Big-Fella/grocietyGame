@@ -1,0 +1,35 @@
+body {
+    background: #f4f4f4;
+    font-family: Arial, sans-serif;
+    text-align: center;
+}
+
+#game-board {
+    width: 520px;
+    margin: auto;
+}
+
+polygon {
+    stroke: black;
+    stroke-width: 0.4;
+}
+
+#north { fill: #ffcccc; }
+#east  { fill: #ccffcc; }
+#south { fill: #ccccff; }
+#west  { fill: #fff2cc; }
+
+text {
+    font-size: 3px;
+    font-weight: bold;
+    fill: #222;
+}
+
+#question {
+    font-size: 3.5px;
+}
+
+#happiness {
+    font-size: 22px;
+    margin-top: 10px;
+}

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <title>Democratie Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="game-board">
+<svg viewBox="0 0 100 100">
+
+    <!-- Driehoeken -->
+    <polygon id="north" points="0,0 100,0 50,50"/>
+    <polygon id="east"  points="100,0 100,100 50,50"/>
+    <polygon id="south" points="0,100 100,100 50,50"/>
+    <polygon id="west"  points="0,0 0,100 50,50"/>
+
+<!-- Vraag per speler (naar de rand gericht) -->
+<text id="q-north"
+      x="50" y="18"
+      text-anchor="middle"
+      transform="rotate(180 50 18)">
+    Vraag
+</text>
+
+<text id="q-east"
+      x="82" y="50"
+      text-anchor="middle"
+      transform="rotate(270 82 50)">
+    Vraag
+</text>
+
+<text id="q-south"
+      x="50" y="82"
+      text-anchor="middle">
+    Vraag
+</text>
+
+<text id="q-west"
+      x="18" y="50"
+      text-anchor="middle"
+      transform="rotate(90 18 50)">
+    Vraag
+</text>
+
+<!-- Bevolking label boven -->
+<text x="50" y="42" text-anchor="middle" font-size="2.5">
+    Bevolking
+</text>
+
+<!-- Achtergrond balk -->
+<rect x="30" y="46" width="40" height="8" rx="2" fill="#ddd"/>
+
+<!-- Dynamische balk -->
+<rect id="happiness-bar" x="30" y="46" width="0" height="8" rx="2" fill="#4caf50"/>
+
+<!-- Bevolking label onder -->
+<text x="50" y="58" text-anchor="middle" font-size="2.5">
+    Bevolking
+</text>
+
+<!-- Timer pop-up -->
+<g id="timer-warning" visibility="hidden">
+    <rect x="20" y="35" width="60" height="30" rx="4" fill="rgba(0,0,0,0.8)"/>
+    <text x="50" y="48" text-anchor="middle" style="fill: white">
+        Laatste minuut!
+    </text>
+</g>
+
+</svg>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
