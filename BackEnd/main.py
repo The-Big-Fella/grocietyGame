@@ -14,7 +14,7 @@ HOST = "0.0.0.0"
 
 class App:
     def __init__(self):
-        self.io = TranslationLayer("/tmp/ttyV1", 9600)
+        self.io = TranslationLayer("/dev/ttyACM0", 9600)
 
         self.controllers = ControllerManager(io=self.io)
 

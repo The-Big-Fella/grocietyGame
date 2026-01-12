@@ -6,6 +6,8 @@ PIP = $(VENV)/bin/pip
 MOCK_WC = ./Mock/
 MOCK_SCRIPT = $(MOCK_WC)main.py
 
+ARDUINO_WC = ./Arduino/Main
+
 TTY_BACKEND = /tmp/ttyV0
 TTY_MOCK = /tmp/ttyV1
 
@@ -41,4 +43,21 @@ start_mock_backend: create_venv
 		$(PYTHON) $(BACKEND_WC)main.py; \
 		kill $$MOCK_PID $$SOCAT_PID; \
 	'
+
+setup_arduino:
+	@echo "Updating Arduino core index..."
+	arduino-cli core update-index
+
+	@echo "Ensuring Arduino AVR core is installed..."
+	arduino-cli core list | grep -q "arduino:avr" || \
+		arduino-cli core install arduino:avr
+
+upload_arduino:
+	@echo "Compiling main.ino..."
+	arduino-cli compile --fqbn arduino:avr:mega $(ARDUINO_WC)
+
+	@echo "Giving device proper permissions"
+
+	@echo "uploading sketch"
+	arduino-cli upload -p /dev/ttyACM0 --fqbn arduino:avr:mega $(ARDUINO_WC)
 
