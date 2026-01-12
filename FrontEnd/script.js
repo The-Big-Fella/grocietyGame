@@ -59,17 +59,6 @@ function setWrappedText(elementId, text, maxCharsPerLine = 22) {
     textEl.appendChild(tspan);
 }
 
-// Timer testen
-//let fakeTime = 60;
-//
-//setInterval(() => {
-//    fakeTime--;
-//
-//    updateTimerWarning(fakeTime);
-//
-//    if (fakeTime <= 0) fakeTime = 30;
-//}, 1000);
-
 // Timer pop-up
 function updateTimerWarning(timeLeft) {
     const warning = document.getElementById("timer-warning");

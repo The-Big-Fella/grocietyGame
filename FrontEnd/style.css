@@ -5,7 +5,7 @@ body {
 }
 
 #game-board {
-    width: 520px;
+    width: 700px;
     margin: auto;
 }
 
@@ -29,7 +29,6 @@ text {
     font-size: 3.5px;
 }
 
-#happiness {
-    font-size: 22px;
-    margin-top: 10px;
+#happiness-bar {
+    transition: width 0.4s ease, fill 0.4s ease;
 }
