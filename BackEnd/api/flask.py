@@ -1,60 +1,37 @@
-from flask import Flask, jsonify, send_from_directory
+from flask import Flask, send_from_directory
+from api import ControllerAPI, RoundAPI, GameAPI
 
-from game.questions.questionlist import QuestionList
 
-
-class ApiServer(Flask):
+class ApiServer:
     def __init__(self, app):
-        super().__init__(__name__, static_folder="./static/")
+        self.app = Flask(
+            __name__,
+            static_folder="static",
+            static_url_path=""
+        )
 
-        self.app = app
+        self.game_app = app
 
-        self.add_url_rule("/getcontroller", "get_state",
-                          self.getControllerState)
+        self._register_blueprints()
 
-        self.add_url_rule("/getcurrentround", "get_round_state",
-                          self.getRoundState)
+        self.app.add_url_rule("/", "index", self.index)
 
-        self.add_url_rule("/", "index", self.index)
+    def _register_blueprints(self):
+        self.app.register_blueprint(
+            ControllerAPI(self.game_app).bp
+        )
+        self.app.register_blueprint(
+            RoundAPI(self.game_app).bp
+        )
+        self.app.register_blueprint(
+            GameAPI(self.game_app).bp
+        )
 
     def index(self):
-        return send_from_directory(self.static_folder, "index.html")
+        return send_from_directory(
+            self.app.static_folder,
+            "index.html"
+        )
 
-    def getControllerState(self):
-        controllers = self.app.controllers.get_controllers()
-
-        print(controllers)
-        controllerState = {}
-        for controller in controllers.values():
-            controllerState[controller.get_controller_id()] = {
-                "sliders": controller.get_slider_data(),
-                "button_state": controller.get_button_state(),
-            }
-
-        return jsonify(controllerState)
-
-    def getRoundState(self):
-        round = self.app.game.current_round
-
-        if not round:
-            return jsonify()
-
-        event = round.getEvent()
-        questions = []
-        roundstate = {}
-        if isinstance(event, QuestionList):
-            for q in event:
-                question = {
-                    "question": q.question,
-                    "mood": q.mood,
-                    "budget": q.budget,
-                    "time": q.time,
-                }
-                questions.append(question)
-
-            roundstate = {
-                "id": round.id,
-                "questions": questions,
-            }
-
-        return jsonify(roundstate)
+    def run(self, **kwargs):
+        self.app.run(**kwargs)

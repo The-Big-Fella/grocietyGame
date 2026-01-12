@@ -17,8 +17,8 @@ class TranslationLayer():
 
         result = self.decode_packet_stream(self.buffer)
         if result:
-            controller_id, controls, packet_len = result
             print(result)
+            controller_id, controls, packet_len = result
             return controller_id, controls, packet_len
 
     def send_reset(self):
@@ -39,38 +39,58 @@ class TranslationLayer():
 
     def decode_packet_stream(self, buffer: bytearray):
         i = 0
-        # need at least SYNC+msg_type+Controller+Count to start reading the buffer
-        while i <= len(buffer) - 2:
-            if buffer[i] != SYNC:
-                i += 1
-                continue
+        try:
+            # need at least SYNC+msg_type+Controller+Count to start reading the buffer
+            while i <= len(buffer) - 4:
+                if buffer[i] != SYNC:
+                    i += 1
+                    continue
 
-            # Potential packet header found
-            msg_type = buffer[i + 1]
-            controller_id = buffer[i + 2]
-            count = buffer[i + 3]
+                # Potential packet header found
+                msg_type = buffer[i + 1]
+                controller_id = buffer[i + 2]
+                count = buffer[i + 3]
 
-            if msg_type == 0x00:
-                packet_len = 4 + count * 2  # full packet length
+                if msg_type == 0x00:
+                    packet_len = 4 + count * 2  # full packet length
 
-                if i + packet_len > len(buffer):
-                    break
+                    # Not enough bytes yet
+                    if i + packet_len > len(buffer):
+                        break
 
-                controls = {}
-                offset = i + 4
-                for _ in range(count):
-                    cid = buffer[offset]
-                    val = buffer[offset + 1]
-                    controls[cid] = val
-                    offset += 2
+                    controls = {}
+                    offset = i + 4
+                    for _ in range(count):
+                        cid = buffer[offset]
+                        val = buffer[offset + 1]
+                        controls[cid] = val
+                        offset += 2
 
-                # Remove packet from buffer
-                del buffer[i:i + packet_len]
+                    # Remove packet from buffer
+                    del buffer[i:i + packet_len]
 
-                return controller_id, controls, packet_len
-            if msg_type == 0x01:
-                ...
+                    return controller_id, controls, packet_len
 
-        # No full packet found, remove bytes before next possible SYNC
-        del buffer[:i]
+                elif msg_type == 0x01:  # RESET packet
+                    packet_len = 4
+                    if i + packet_len > len(buffer):
+                        break
+                    controller_id = buffer[i + 2]
+                    del buffer[i:i + packet_len]
+                    return controller_id, None, packet_len
+
+                else:
+                    # Unknown msg_type, skip this byte
+                    i += 1
+
+            # No full packet found, remove bytes before next possible SYNC
+            if i > 0:
+                del buffer[:i]
+
+        except Exception as e:
+            print("Error decoding packet:", e)
+            # Remove first byte to try to resync
+            if len(buffer) > 0:
+                del buffer[0]
+
         return None
