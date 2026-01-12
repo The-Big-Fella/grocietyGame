@@ -1,3 +1,4 @@
+SHELL := /bin/bash
 BACKEND_WC = ./BackEnd/
 VENV = venv
 PYTHON = $(VENV)/bin/python
