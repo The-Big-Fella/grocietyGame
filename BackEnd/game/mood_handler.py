@@ -33,8 +33,6 @@ class MoodDecay:
 
             elapsed = time.monotonic() - self.start_time
 
-            print(elapsed)
-
             # Apply all scheduled penalties
             while (
                 self.next_index < len(self.timeline)
