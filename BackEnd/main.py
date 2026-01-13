@@ -1,5 +1,6 @@
 import time
 import threading
+import os
 
 from controls.translationlayer import TranslationLayer
 from controls.controlpanel import ControllerManager
@@ -10,11 +11,12 @@ from database.database import Database
 
 PORT = 5000
 HOST = "0.0.0.0"
+CONTROLLER = os.getenv("CONTROLLER_PATH")
 
 
 class App:
     def __init__(self):
-        self.io = TranslationLayer("/dev/ttyACM0", 9600)
+        self.io = TranslationLayer(CONTROLLER, 9600)
 
         self.controllers = ControllerManager(io=self.io)
 

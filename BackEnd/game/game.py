@@ -4,6 +4,7 @@ from game.rounds.round import Round
 from game.rounds.roundslist import RoundsList
 from game.mood_handler import MoodDecay
 
+
 class Game:
     def __init__(self, control_manager):
         self.controls = control_manager
@@ -26,7 +27,8 @@ class Game:
         self.controls.reset_all()
 
         self.mood_decay.start()
-        self.mood_decay.start_round() #eerste round starten
+        # eerste round starten
+        self.mood_decay.start_round()
 
         print("Game started")
 
