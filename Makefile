@@ -34,7 +34,7 @@ shell: create_venv
 
 start_mock_backend: create_venv
 	@echo "Starting socat + mock backend..."
-	@CONTROLLER_PATH="$(TTY_BACKEND)" bash -c '\
+	@CONTROLLER_PATH="$(TTY_MOCK)" bash -c '\
 		set -e; \
 		socat -d -d \
 			PTY,link=$(TTY_BACKEND),raw,echo=0,mode=666 \

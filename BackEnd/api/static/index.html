@@ -1,186 +1,63 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Game Admin</title>
-<style>
-  body { font-family: sans-serif; margin: 20px; }
-  h1, h2 { margin-top: 1em; }
-  table { border-collapse: collapse; width: 100%; margin-top: 1em; }
-  th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: left; }
-  th { background: #f5f5f5; }
-  form { margin-bottom: 1em; }
-  input, select, button { margin: 4px; }
-  #status { margin-top: 1em; font-weight: bold; color: green; }
-  #status.error { color: red; }
-</style>
+    <meta charset="UTF-8">
+    <title>Grociety | Real-time Monitor</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #1a1a2e;
+            --card: #16213e;
+            --text: #e94560;
+            --accent: #0f3460;
+        }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; padding: 20px; margin: 0; }
+        .grid { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
+        
+        h1 { border-bottom: 2px solid var(--text); padding-bottom: 10px; color: var(--text); }
+        h2 { font-size: 1.2rem; color: #fff; opacity: 0.8; }
+
+        .controller, .round-card { 
+            background: var(--card); 
+            padding: 15px; 
+            margin-bottom: 15px; 
+            border-radius: 10px; 
+            border-left: 5px solid var(--text);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .badge { font-size: 0.7rem; padding: 3px 8px; border-radius: 4px; background: #444; float: right; }
+        .badge.active { background: var(--text); }
+
+        .question-item { 
+            background: var(--accent); 
+            padding: 10px; 
+            margin-top: 10px; 
+            border-radius: 5px; 
+        }
+        .impacts { display: flex; gap: 10px; margin-top: 5px; font-size: 0.8rem; }
+        .impact { padding: 2px 6px; border-radius: 3px; background: rgba(0,0,0,0.2); }
+        .budget { color: #4cd137; }
+        .mood { color: #fbc531; }
+        
+        .status-msg { font-style: italic; color: #888; }
+    </style>
 </head>
 <body>
+    <h1><i class="fas fa-tv"></i> Grociety Game Monitor</h1>
 
-<h1>Game Admin Panel</h1>
+    <div class="grid">
+        <section id="controllers">
+            <h2><i class="fas fa-microchip"></i> Hardware State</h2>
+            <div id="controller-list"></div>
+        </section>
 
-<!-- ================= TYPES ================= -->
-<h2>Create Question Type</h2>
-<form id="create-type">
-  <input id="type-name" placeholder="Type name" required>
-  <button>Create Type</button>
-</form>
+        <section id="round">
+            <h2><i class="fas fa-play-circle"></i> Live Game Logic</h2>
+            <div id="round-info"></div>
+        </section>
+    </div>
 
-<!-- ================= ROUNDS ================= -->
-<h2>Create Round</h2>
-<form id="create-round">
-  <input id="event-id" type="number" placeholder="Event ID" required>
-  <input id="round-number" type="number" placeholder="Round #" required>
-  <button>Create Round</button>
-</form>
-
-<!-- ================= QUESTIONS ================= -->
-<h2>Create Question</h2>
-<form id="create-question">
-  <input id="text" placeholder="Question text" required>
-  <input id="budget" type="number" placeholder="Budget" required>
-  <input id="mood" type="number" placeholder="Mood" required>
-  <select id="type-select" required></select>
-  <select id="round-select" required></select>
-  <button>Create Question</button>
-</form>
-
-<p id="status"></p>
-
-<!-- ================= TABLE ================= -->
-<h2>All Questions</h2>
-<table>
-  <thead>
-    <tr>
-      <th>ID</th>
-      <th>Text</th>
-      <th>Budget</th>
-      <th>Mood</th>
-      <th>Type</th>
-      <th>Round</th>
-    </tr>
-  </thead>
-  <tbody id="question-table"></tbody>
-</table>
-
-<script>
-const $ = id => document.getElementById(id);
-
-/* ================== API HELPER ================== */
-async function api(url, options={}) {
-  const res = await fetch(url, options);
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
-}
-
-/* ================== LOADERS ================== */
-async function loadTypes() {
-  const types = await api("/api/types");
-  $("type-select").innerHTML =
-    types.map(t => `<option value="${t.id}">${t.name}</option>`).join("");
-}
-
-async function loadRounds() {
-  const rounds = await api("/api/rounds");
-  $("round-select").innerHTML =
-    rounds.map(r => `<option value="${r.id}">Round ${r.round_number}</option>`).join("");
-}
-
-async function loadQuestions() {
-  const questions = await api("/api/questions");
-
-  $("question-table").innerHTML = questions.map(q => `
-    <tr>
-      <td>${q.id}</td>
-      <td>${q.text}</td>
-      <td>${q.budget}</td>
-      <td>${q.mood}</td>
-      <td>${q.type_name}</td>
-      <td>${q.round_number}</td>
-    </tr>
-  `).join("");
-}
-
-/* ================== FORM HANDLERS ================== */
-function showStatus(msg, error=false) {
-  $("status").textContent = msg;
-  $("status").className = error ? "error" : "";
-}
-
-$("create-type").onsubmit = async e => {
-  e.preventDefault();
-  try {
-    await api("/api/types", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: $("type-name").value.trim() })
-    });
-    $("create-type").reset();
-    showStatus("Type created ✔");
-    await loadTypes();
-  } catch (err) {
-    showStatus("Error creating type", true);
-    console.error(err);
-  }
-};
-
-$("create-round").onsubmit = async e => {
-  e.preventDefault();
-  try {
-    await api("/api/rounds", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        event_id: Number($("event-id").value),
-        round_number: Number($("round-number").value)
-      })
-    });
-    $("create-round").reset();
-    showStatus("Round created ✔");
-    await loadRounds();
-  } catch (err) {
-    showStatus("Error creating round", true);
-    console.error(err);
-  }
-};
-
-$("create-question").onsubmit = async e => {
-  e.preventDefault();
-  try {
-    await api("/api/questions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        text: $("text").value.trim(),
-        budget: Number($("budget").value),
-        mood: Number($("mood").value),
-        type_id: Number($("type-select").value),
-        round_id: Number($("round-select").value)
-      })
-    });
-    $("create-question").reset();
-    showStatus("Question created ✔");
-    await loadQuestions();
-  } catch (err) {
-    showStatus("Error creating question", true);
-    console.error(err);
-  }
-};
-
-/* ================== INIT ================== */
-async function init() {
-  try {
-    await loadTypes();
-    await loadRounds();
-    await loadQuestions();
-  } catch (err) {
-    showStatus("Failed to load data", true);
-    console.error(err);
-  }
-}
-
-init();
-</script>
+    <script src="app.js"></script>
 </body>
 </html>
-

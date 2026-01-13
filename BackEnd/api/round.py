@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
 import sqlite3
+from game.questions.questionlist import QuestionList
 
 
 class RoundAPI:
@@ -24,6 +25,38 @@ class RoundAPI:
                              self.create_round, methods=["POST"])
         self.bp.add_url_rule("/rounds/<int:round_id>",
                              "delete_round", self.delete_round, methods=["DELETE"])
+
+        self.bp.add_url_rule(
+            "/getcurrentround",
+            "get_round_state",
+            self.get_round_state
+        )
+
+    def get_round_state(self):
+        round = self.app.game.current_round
+
+        if not round:
+            return jsonify({})
+
+        event = round.getEvent()
+
+        if not isinstance(event, QuestionList):
+            return jsonify({})
+
+        questions = [
+            {
+                "question": q.question,
+                "mood": q.mood,
+                "budget": q.budget,
+                "time": q.time,
+            }
+            for q in event
+        ]
+
+        return jsonify({
+            "id": round.id,
+            "questions": questions,
+        })
 
     def list_events(self):
         return jsonify(self.app.db.get_events())

@@ -22,7 +22,7 @@ class App:
 
         self.db = Database()
 
-        self.game = Game(control_manager=self.controllers)
+        self.game = Game(control_manager=self.controllers, app=self)
 
         self.api_server = ApiServer(self)
 

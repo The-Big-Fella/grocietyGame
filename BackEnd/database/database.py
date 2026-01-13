@@ -55,6 +55,7 @@ class Database(DatabaseManager):
             return [dict(r) for r in conn.execute("""
                 SELECT
                     r.id,
+                    r.event_id,
                     r.round_number,
                     e.name AS event
                 FROM rounds r
@@ -92,6 +93,15 @@ class Database(DatabaseManager):
                 )
 
             return [dict(r) for r in rows]
+
+    def get_questions_by_round(self, round_id):
+        with self.transaction() as conn:
+            cursor = conn.execute("""
+                select text, budget, mood 
+                from questions 
+                where round_id = ?
+            """, (round_id,))
+            return [dict(row) for row in cursor.fetchall()]
 
     def get_questions(self):
         try:
