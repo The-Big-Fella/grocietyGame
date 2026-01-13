@@ -1,43 +1,37 @@
 class BudgetHandler:
-    def __init__(self, total_budget: int):
+    def __init__(self, total_budget: int, max_round_budget: int):
         self.total_budget = total_budget
+        self.max_round_budget = max_round_budget
         self.sliders = [0, 0, 0]
 
-    def reset(self):
+    def reset_round(self):
         self.sliders = [0, 0, 0]
 
     def apply_slider_change(self, index: int, value: int):
-        """
-        Player wants slider[index] to be `value`.
-        Other two sliders are adjusted equally.
-        """
-        value = max(0, min(value, self.total_budget))
+        # slider-waarde begrenzen door max inzet per ronde
+        value = max(0, min(value, self.max_round_budget))
         self.sliders[index] = value
 
-        remaining = self.total_budget - value
-        other_indices = [i for i in range(3) if i != index]
-
-        # split remaining equally
-        split = remaining // 2
-        remainder = remaining - (split * 2)
-
-        self.sliders[other_indices[0]] = split
-        self.sliders[other_indices[1]] = split + remainder
+        used = sum(self.sliders)
+        if used > self.max_round_budget:
+            excess = used - self.max_round_budget
+            self.sliders[index] -= excess
 
         return self.sliders
 
     def reconcile(self, desired_sliders: list[int]):
-        """
-        Given raw controller sliders, figure out which one moved most
-        and treat that as the intent.
-        """
         diffs = [
             abs(desired_sliders[i] - self.sliders[i])
             for i in range(3)
         ]
-
         moved_index = diffs.index(max(diffs))
         return self.apply_slider_change(moved_index, desired_sliders[moved_index])
 
-    def get_sliders(self):
-        return list(self.sliders)
+    def spend_round_budget(self):
+        spent = sum(self.sliders)
+        spent = min(spent, self.total_budget)
+        self.total_budget -= spent
+        return spent
+
+    def is_budget_empty(self):
+        return self.total_budget <= 0
