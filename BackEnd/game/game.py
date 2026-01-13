@@ -1,14 +1,17 @@
+from game.budget_handler import BudgetHandler
+from game.mood_handler import MoodDecay
 from game.questions.question import Question
 from game.questions.questionlist import QuestionList
 from game.rounds.round import Round
 from game.rounds.roundslist import RoundsList
-from game.mood_handler import MoodDecay
+
 
 class Game:
     def __init__(self, control_manager):
         self.controls = control_manager
 
         self.budget = 100_000
+        self.budget_handler = BudgetHandler(self.budget)
         self.mood = 100
 
         self.rounds = RoundsList()
@@ -36,17 +39,22 @@ class Game:
         # Questions
         q1 = Question("test1", 10, 1000, 10)
         q2 = Question("test2", 10, 1000, -10)
+        q3 = Question("test3", 10, 1000, -10)
 
-        q3 = Question("test3", 10, 1000, 5)
-        q4 = Question("test4", 10, 1000, -5)
+        q4 = Question("test4", 10, 1000, 5)
+        q5 = Question("test5", 10, 1000, -5)
+        q6 = Question("test6", 10, 1000, -5)
 
         list1 = QuestionList()
         list1.append(q1)
         list1.append(q2)
+        list1.append(q3)
 
         list2 = QuestionList()
-        list2.append(q3)
+        
         list2.append(q4)
+        list2.append(q5)
+        list2.append(q6)
 
         r1 = Round(0, "questions")
         r2 = Round(1, "storm")
@@ -79,6 +87,8 @@ class Game:
             return
 
         self.mood_decay.start_round()
+        self.mood_decay.start_round()
+        self.controls.reset_all()
 
         print(
             f"\n=== Starting Round {self.current_round.id} "
@@ -94,6 +104,7 @@ class Game:
 
     def _end_current_round(self):
         self.current_round = None
+        self.budget_handler.reset()
         self.controls.reset_all()
 
     def _end_game(self):
