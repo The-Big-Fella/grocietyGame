@@ -23,9 +23,9 @@ updateTimerWarning(data.time_left);
 
 // Kleur van de balk bepalen
 function getHappinessColor(value) {
-    if (value < 30) return "#e53935";   // rood
-    if (value < 60) return "#fb8c00";   // oranje
-    return "#43a047";                   // groen
+    if (value < 30) return "#e53935";
+    if (value < 60) return "#fb8c00";
+    return "#43a047";                   
 }
 
 // Tekst opdelen in regels
