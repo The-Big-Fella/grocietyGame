@@ -1,10 +1,11 @@
 import time
-# import threading
 import os
+import signal
+import sys
 
-from controls.translationlayer import TranslationLayer
-from controls.controlpanel import ControllerManager
-
+from controls import ControllerManager, TranslationLayer
+from game import Game
+from api import ApiServer
 
 PORT = 5000
 HOST = "0.0.0.0"
@@ -13,34 +14,52 @@ CONTROLLER = os.getenv("CONTROLLER_PATH")
 
 class App:
     def __init__(self):
-        self.io = TranslationLayer(CONTROLLER, 9600)
+        self.running = True
 
+        # controls
+        self.io = TranslationLayer(CONTROLLER, 9600)
         self.controllers = ControllerManager(io=self.io)
 
-    # def start_api(self):
-    #    t = threading.Thread(
-    #        target=lambda: self.api_server.run(
-    #            host="0.0.0.0", port=5000, debug=False, use_reloader=False),
-    #        daemon=True,
-    #    )
-    #    t.start()
-    #    print("API server running on http://localhost:5000")
+        # backend
+        self.game = Game(self.controllers, self)
+        self.api = ApiServer(self)
+
+        signal.signal(signal.SIGINT, self.shutdown)
+        signal.signal(signal.SIGTERM, self.shutdown)
+
+    def get_game(self) -> Game:
+        return self.game
+
+    def shutdown(self, signum, frame):
+        print(f"\nShutting down gracefully (signal {signum})...")
+        self.running = False
 
     def controller_update(self):
         result = self.io.update()
         if result:
-            print(result)
             cid, controls, _ = result
             self.controllers.update_from_packet(cid, controls)
 
     def run(self):
-        # self.start_api()
         # self.game.start_game()
 
-        while True:
-            self.controller_update()
-            # self.game.update()
-            time.sleep(0.001)
+        try:
+            while self.running:
+                self.controller_update()
+                self.game.update()
+                time.sleep(0.001)
+        finally:
+            self.cleanup()
+
+    def cleanup(self):
+        try:
+            if hasattr(self.io, "close"):
+                self.io.close()
+        except Exception as e:
+            print("Error during cleanup:", e)
+
+        print("Shutdown complete.")
+        sys.exit(0)
 
 
 def main():

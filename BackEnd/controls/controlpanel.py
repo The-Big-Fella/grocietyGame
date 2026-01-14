@@ -52,7 +52,4 @@ class ControllerManager:
         for controller in self.controllers.values():
             controller.sliders = [0, 0, 0]
             controller.button = 0
-        # broadcast reset
         self.io.send_reset()
-
-   
