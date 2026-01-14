@@ -27,7 +27,14 @@ class ControllerManager:
         self.controllers: dict[int, Controller] = {}
 
     def get_controllers(self):
-        return self.controllers
+        controllers = {}
+        for id in self.controllers:
+            controllers[id] = {
+                "button_state": self.controllers.get(id).get_button_state(),
+                "sliders": self.controllers.get(id).get_slider_data(),
+            }
+
+        return controllers
 
     def get_controller(self, controller_id: int):
         return self.controllers.get(controller_id)

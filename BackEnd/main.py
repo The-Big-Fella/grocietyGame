@@ -2,6 +2,7 @@ import time
 import os
 import signal
 import sys
+import threading
 
 from controls import ControllerManager, TranslationLayer
 from game import Game
@@ -27,8 +28,20 @@ class App:
         signal.signal(signal.SIGINT, self.shutdown)
         signal.signal(signal.SIGTERM, self.shutdown)
 
+    def start_api(self):
+        t = threading.Thread(
+            target=lambda: self.api.run(
+                host="0.0.0.0", port=5000, debug=False, use_reloader=False),
+            daemon=True,
+        )
+        t.start()
+        print("API server running on http://localhost:5000")
+
     def get_game(self) -> Game:
         return self.game
+
+    def get_controllers(self) -> ControllerManager:
+        return self.controllers
 
     def shutdown(self, signum, frame):
         print(f"\nShutting down gracefully (signal {signum})...")
@@ -42,6 +55,7 @@ class App:
 
     def run(self):
         # self.game.start_game()
+        self.start_api()
 
         try:
             while self.running:
