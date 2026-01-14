@@ -47,7 +47,6 @@ class RoundAPI:
             {
                 "question": q.question,
                 "mood": q.mood,
-                "budget": q.budget,
                 "time": q.time,
             }
             for q in event
