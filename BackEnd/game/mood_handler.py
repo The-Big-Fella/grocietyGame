@@ -1,14 +1,13 @@
 import time
 import threading
 
-
 class MoodDecay:
     def __init__(self, game, post_penalty_delay=30, post_penalty_amount=10):
         self.game = game
         self.running = False
         self.thread = None
 
-        # Locked-in penalty schedule (seconds since round start, penalty)
+        # Scheduled penalties: (seconds since round start, penalty amount)
         self.timeline = [
             (150, 5),
             (240, 5),
@@ -33,7 +32,7 @@ class MoodDecay:
 
             elapsed = time.monotonic() - self.start_time
 
-            # Apply all scheduled penalties
+            # Apply scheduled penalties
             while (
                 self.next_index < len(self.timeline)
                 and elapsed >= self.timeline[self.next_index][0]
@@ -43,24 +42,18 @@ class MoodDecay:
                 print(f"[MoodDecay] {trigger_time}s → mood {self.game.mood}")
                 self.next_index += 1
 
-            # Check if timeline is done and post-penalty timer has not started
+            # Post-penalty logic
             if self.next_index >= len(self.timeline) and not self.post_penalty_started:
-                # Start post-penalty timer dynamically after last scheduled penalty
                 self.post_penalty_start_time = time.monotonic()
                 self.post_penalty_started = True
                 print("[MoodDecay] Post-penalty timer started")
 
-            # Handle post-penalty logic
             if self.post_penalty_started:
                 post_elapsed = time.monotonic() - self.post_penalty_start_time
                 if post_elapsed >= self.post_penalty_delay:
-                    # Apply extra mood penalty
-                    self.game.mood = max(
-                        0, self.game.mood - self.post_penalty_amount)
-                    print(
-                        f"[MoodDecay] Post-penalty applied → mood {self.game.mood}")
+                    self.game.mood = max(0, self.game.mood - self.post_penalty_amount)
+                    print(f"[MoodDecay] Post-penalty applied → mood {self.game.mood}")
 
-                    # Automatically end the round if still active
                     if self.game.current_round is not None:
                         print("[MoodDecay] Ending round due to no consensus")
                         self.game._end_current_round()
@@ -72,15 +65,11 @@ class MoodDecay:
             time.sleep(0.1)
 
     def start(self):
-
-        print("[MoodDecay] start")
         if not self.running:
             self.running = True
-            self.thread = threading.Thread(
-                target=self._run,
-                daemon=True
-            )
+            self.thread = threading.Thread(target=self._run, daemon=True)
             self.thread.start()
+            print("[MoodDecay] Started")
 
     def start_round(self):
         """Call at the start of each round"""

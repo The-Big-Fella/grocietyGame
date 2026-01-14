@@ -10,8 +10,8 @@ class DatabaseManager:
         db_exists = os.path.exists(self.db_path)
 
         if not db_exists:
-            print(f"Database {
-                  self.db_path} not found. Creating and initializing...")
+            # print(f"Database {
+            #       self.db_path} not found. Creating and initializing...")
             self._initialize_schema()
         else:
             self._initialize_schema()

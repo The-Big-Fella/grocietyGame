@@ -1,86 +1,113 @@
-const UPDATE_INTERVAL = 500; // Increased slightly for better performance
+const UPDATE_INTERVAL = 500;
 
+let currentBudget = 0;
+let roundStartTime = null;
+
+// Update controllers visually
 async function updateControllers() {
     try {
         const res = await fetch("/getcontroller");
         const data = await res.json();
-
         const container = document.getElementById("controller-list");
-        // Only clear if data actually changed to prevent flickering
         container.innerHTML = "";
 
-        // data is usually an object where keys are controller IDs
         Object.entries(data).forEach(([id, ctrl]) => {
             const div = document.createElement("div");
             div.className = "controller";
             div.innerHTML = `
                 <div class="card-header">
-                    <strong><i class="fas fa-gamepad"></i> Controller ${id}</strong>
+                    <strong>Controller ${id}</strong>
                     <span class="badge ${ctrl.button_state ? 'active' : ''}">
                         ${ctrl.button_state ? "PRESSED" : "RELEASED"}
                     </span>
                 </div>
-                <div class="slider-info">
-                    Sliders: ${ctrl.sliders.join(" | ")}
-                </div>
+                <div>Sliders: ${ctrl.sliders.join(" | ")}</div>
             `;
             container.appendChild(div);
         });
     } catch (err) {
-        console.error("Error fetching controllers:", err);
+        console.error(err);
     }
 }
 
+// Update round info: questions + sliders
 async function updateRound() {
     try {
-        // This endpoint should return the current state of your Round and QuestionList
         const res = await fetch("/api/getcurrentround");
         const data = await res.json();
-
         const container = document.getElementById("round-info");
-        
+
         if (!data || data.error) {
             container.innerHTML = `<div class="status-msg">Waiting for game start...</div>`;
             return;
         }
 
-        // data now represents your Round Node
-        // Based on your Round class: { id: X, round_type: "...", event: [...] }
-        let html = `
-            <div class="round-card">
-                <h3>${data.round_type} (ID: ${data.id})</h3>
-                <div class="question-list">
-        `;
+        currentBudget = data.round_budget;
+        if (!roundStartTime) roundStartTime = Date.now();
+        document.getElementById("round-budget").textContent = currentBudget;
 
-        if (data.questions && data.questions.length > 0) {
-            data.questions.forEach((q, index) => {
-                html += `
-                    <div class="question-item">
-                        <span class="q-text"><strong>Q${index + 1}:</strong> ${q.question}</span>
-                        <div class="impacts">
-                            <span class="impact budget">Budget: ${q.budget}</span>
-                            <span class="impact mood">Mood: ${q.mood}</span>
-                            <span class="impact time">Time: ${q.time}s</span>
-                        </div>
+        // Render questions
+        let html = '';
+        data.questions.forEach((q, index) => {
+            html += `
+                <div class="question-item">
+                    <strong>Q${index + 1}:</strong> ${q.question}
+                    <div class="slider-container">
+                        <input type="range" min="0" max="${currentBudget}" value="0" step="1"
+                               data-index="${index}" class="budget-slider">
+                        <span>Allocated: <span class="slider-value">0</span></span>
                     </div>
-                `;
-            });
-        } else {
-            html += `<p>No questions loaded for this round.</p>`;
-        }
-
-        html += `</div></div>`;
+                </div>
+            `;
+        });
         container.innerHTML = html;
 
+        // Add slider behavior
+        const sliders = container.querySelectorAll(".budget-slider");
+        sliders.forEach(slider => {
+            slider.addEventListener("input", () => {
+                const value = parseInt(slider.value);
+
+                // Calculate total allocation
+                let totalAllocated = 0;
+                sliders.forEach(s => totalAllocated += parseInt(s.value));
+
+                // Cap slider if exceeds budget
+                if (totalAllocated > currentBudget) {
+                    slider.value = value - (totalAllocated - currentBudget);
+                }
+
+                // Update displayed allocated value
+                slider.nextElementSibling.querySelector(".slider-value").textContent = slider.value;
+
+                // Update budget display
+                let allocated = 0;
+                sliders.forEach(s => allocated += parseInt(s.value));
+                document.getElementById("round-budget").textContent = currentBudget - allocated;
+            });
+        });
+
     } catch (err) {
-        console.error("Error fetching round:", err);
+        console.error(err);
     }
 }
 
+// Update round timer
+function updateTimer() {
+    if (roundStartTime) {
+        const elapsed = Math.floor((Date.now() - roundStartTime) / 1000);
+        document.getElementById("round-timer").textContent = elapsed;
+    }
+}
+
+// Main loop
 function updateLoop() {
     updateControllers();
     updateRound();
+    updateTimer();
+    updateMoodPenalties(); // <-- added here
     setTimeout(updateLoop, UPDATE_INTERVAL);
 }
 
 window.onload = updateLoop;
+

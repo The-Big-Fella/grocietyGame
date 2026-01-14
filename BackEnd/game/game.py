@@ -63,17 +63,13 @@ class Game:
             for q_data in questions_data:
                 new_question = Question(
                     question=q_data['text'],
-                    time=10,
-                    budget=q_data['budget'],
-                    mood=q_data['mood']
                 )
                 q_list.append(new_question)
 
             new_round.addEvent(q_list)
             self.rounds.append(new_round)
 
-        print(f"Successfully loaded {self.rounds.size} rounds for event: {
-              event_rounds[0]['event']}")
+        print(f"Successfully loaded {self.rounds.size} rounds for event: {event_rounds[0]['event']}")
 
     def update(self):
         if self.state != "running":
@@ -147,17 +143,7 @@ class Game:
         if not controllers:
             return None
 
-        totals = [0, 0, 0]
-
-        for c in controllers:
-            sliders = c.get_slider_data()
-            for i in range(3):
-                totals[i] += sliders[i]
-
-        count = len(controllers)
-        return [t // count for t in totals]
-
-
+        return controllers[0].get_slider_data().copy()
     
     def _broadcast_sliders(self, sliders):
         for controller in self.controls.all_controllers():
