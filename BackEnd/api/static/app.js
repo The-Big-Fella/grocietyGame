@@ -46,7 +46,7 @@ async function updateRound() {
         if (data.questions && data.questions.length) {
             html += "<ul>";
             data.questions.forEach(q => {
-                html += `<li>${q.question} | Mood: ${q.mood} | Budget: ${q.budget} | Time: ${q.time}</li>`;
+                html += `<li>${q.question} | Mood: ${q.mood} | Time: ${q.time}</li>`;
             });
             html += "</ul>";
         }

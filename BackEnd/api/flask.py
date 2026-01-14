@@ -47,7 +47,6 @@ class ApiServer(Flask):
                 question = {
                     "question": q.question,
                     "mood": q.mood,
-                    "budget": q.budget,
                     "time": q.time,
                 }
                 questions.append(question)
