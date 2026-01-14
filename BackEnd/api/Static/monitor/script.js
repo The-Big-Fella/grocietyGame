@@ -2,7 +2,7 @@ const UPDATE_INTERVAL = 500;
 
 async function updateControllers() {
     try {
-        const res = await fetch("/getcontroller");
+        const res = await fetch("/controllers_state");
         const data = await res.json();
 
         const container = document.getElementById("controller-list");
