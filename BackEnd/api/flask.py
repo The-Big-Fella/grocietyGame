@@ -1,21 +1,35 @@
-from flask import Flask, jsonify, send_from_directory
+from flask import Flask, send_from_directory
+from api import ControllerAPI, RoundAPI, GameAPI, QuestionAPI
 
-from game.questions.questionlist import QuestionList
 
-
-class ApiServer(Flask):
+class ApiServer:
     def __init__(self, app):
-        super().__init__(__name__, static_folder="./static/")
+        self.app = Flask(
+            __name__,
+            static_folder="static",
+            static_url_path=""
+        )
 
-        self.app = app
+        self.game_app = app
 
-        self.add_url_rule("/getcontroller", "get_state",
-                          self.getControllerState)
+        self._register_blueprints()
 
-        self.add_url_rule("/getcurrentround", "get_round_state",
-                          self.getRoundState)
+        self.app.add_url_rule("/", "index", self.index)
+        self.app.add_url_rule("/crud", "crud", self.crud)
 
-        self.add_url_rule("/", "index", self.index)
+    def _register_blueprints(self):
+        self.app.register_blueprint(
+            ControllerAPI(self.game_app).bp
+        )
+        self.app.register_blueprint(
+            RoundAPI(self.game_app).bp
+        )
+        self.app.register_blueprint(
+            GameAPI(self.game_app).bp
+        )
+        self.app.register_blueprint(
+            QuestionAPI(self.game_app).bp
+        )
 
     def index(self):
         return send_from_directory(self.static_folder, "index.html")

@@ -1,46 +1,56 @@
-// Update interval (ms)
-const UPDATE_INTERVAL = 200;
+const UPDATE_INTERVAL = 500; // Increased slightly for better performance
 
-// Fetch and display controller state
 async function updateControllers() {
     try {
         const res = await fetch("/getcontroller");
         const data = await res.json();
 
         const container = document.getElementById("controller-list");
+        // Only clear if data actually changed to prevent flickering
         container.innerHTML = "";
 
-        for (const [id, ctrl] of Object.entries(data)) {
+        // data is usually an object where keys are controller IDs
+        Object.entries(data).forEach(([id, ctrl]) => {
             const div = document.createElement("div");
             div.className = "controller";
             div.innerHTML = `
-                <strong>Controller ${id}</strong><br>
-                Sliders: ${ctrl.sliders.join(", ")}<br>
-                Button: ${ctrl.button_state ? "Pressed" : "Released"}
+                <div class="card-header">
+                    <strong><i class="fas fa-gamepad"></i> Controller ${id}</strong>
+                    <span class="badge ${ctrl.button_state ? 'active' : ''}">
+                        ${ctrl.button_state ? "PRESSED" : "RELEASED"}
+                    </span>
+                </div>
+                <div class="slider-info">
+                    Sliders: ${ctrl.sliders.join(" | ")}
+                </div>
             `;
             container.appendChild(div);
-        }
+        });
     } catch (err) {
         console.error("Error fetching controllers:", err);
     }
 }
 
-// Fetch and display current round state
 async function updateRound() {
     try {
-        const res = await fetch("/getcurrentround");
+        // This endpoint should return the current state of your Round and QuestionList
+        const res = await fetch("/api/getcurrentround");
         const data = await res.json();
 
         const container = document.getElementById("round-info");
-        container.innerHTML = "";
-
-        if (!data) {
-            container.textContent = "No active round";
+        
+        if (!data || data.error) {
+            container.innerHTML = `<div class="status-msg">Waiting for game start...</div>`;
             return;
         }
 
-        const div = document.createElement("div");
-        div.className = "round";
+        // data now represents your Round Node
+        // Based on your Round class: { id: X, round_type: "...", event: [...] }
+        let html = `
+            <div class="round-card">
+                <h3>${data.round_type} (ID: ${data.id})</h3>
+                <div class="question-list">
+        `;
 
         let html = `<strong>Round ${data.id}</strong><br>`;
         if (data.questions && data.questions.length) {
@@ -48,22 +58,22 @@ async function updateRound() {
             data.questions.forEach(q => {
                 html += `<li>${q.question} | Mood: ${q.mood} | Time: ${q.time}</li>`;
             });
-            html += "</ul>";
+        } else {
+            html += `<p>No questions loaded for this round.</p>`;
         }
-        div.innerHTML = html;
-        container.appendChild(div);
+
+        html += `</div></div>`;
+        container.innerHTML = html;
 
     } catch (err) {
         console.error("Error fetching round:", err);
     }
 }
 
-// Main update loop
 function updateLoop() {
     updateControllers();
     updateRound();
     setTimeout(updateLoop, UPDATE_INTERVAL);
 }
 
-// Start updating after page loads
 window.onload = updateLoop;
