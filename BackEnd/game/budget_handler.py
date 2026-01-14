@@ -8,24 +8,14 @@ class BudgetHandler:
         self.sliders = [0, 0, 0]
 
     def apply_slider_change(self, index: int, value: int):
-        # slider-waarde begrenzen door max inzet per ronde
-        value = max(0, min(value, self.max_round_budget))
+    # zet gewenste slider
         self.sliders[index] = value
-
-        used = sum(self.sliders)
-        if used > self.max_round_budget:
-            excess = used - self.max_round_budget
-            self.sliders[index] -= excess
-
         return self.sliders
 
+
     def reconcile(self, desired_sliders: list[int]):
-        diffs = [
-            abs(desired_sliders[i] - self.sliders[i])
-            for i in range(3)
-        ]
-        moved_index = diffs.index(max(diffs))
-        return self.apply_slider_change(moved_index, desired_sliders[moved_index])
+        self.sliders = desired_sliders.copy()
+        return self.sliders
 
     def spend_round_budget(self):
         spent = sum(self.sliders)

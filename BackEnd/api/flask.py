@@ -32,16 +32,42 @@ class ApiServer:
         )
 
     def index(self):
-        return send_from_directory(
-            self.app.static_folder,
-            "index.html"
-        )
+        return send_from_directory(self.static_folder, "index.html")
 
-    def crud(self):
-        return send_from_directory(
-            self.app.static_folder,
-            "./crud/index.html"
-        )
+    def getControllerState(self):
+        controllers = self.app.controllers.get_controllers()
 
-    def run(self, **kwargs):
-        self.app.run(**kwargs)
+        print(controllers)
+        controllerState = {}
+        for controller in controllers.values():
+            controllerState[controller.get_controller_id()] = {
+                "sliders": controller.get_slider_data(),
+                "button_state": controller.get_button_state(),
+            }
+
+        return jsonify(controllerState)
+
+    def getRoundState(self):
+        round = self.app.game.current_round
+
+        if not round:
+            return jsonify()
+
+        event = round.getEvent()
+        questions = []
+        roundstate = {}
+        if isinstance(event, QuestionList):
+            for q in event:
+                question = {
+                    "question": q.question,
+                    "mood": q.mood,
+                    "time": q.time,
+                }
+                questions.append(question)
+
+            roundstate = {
+                "id": round.id,
+                "questions": questions,
+            }
+
+        return jsonify(roundstate)

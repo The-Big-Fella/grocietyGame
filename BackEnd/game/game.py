@@ -147,18 +147,9 @@ class Game:
         if not controllers:
             return None
 
-        totals = [0, 0, 0]
+        # Use the first controller's sliders exactly as-is
+        return controllers[0].get_slider_data()
 
-        for c in controllers:
-            sliders = c.get_slider_data()
-            for i in range(3):
-                totals[i] += sliders[i]
-
-        count = len(controllers)
-        return [t // count for t in totals]
-
-
-    
     def _broadcast_sliders(self, sliders):
         for controller in self.controls.all_controllers():
             controller.sliders = sliders.copy()

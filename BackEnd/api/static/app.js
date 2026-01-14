@@ -52,18 +52,11 @@ async function updateRound() {
                 <div class="question-list">
         `;
 
-        if (data.questions && data.questions.length > 0) {
-            data.questions.forEach((q, index) => {
-                html += `
-                    <div class="question-item">
-                        <span class="q-text"><strong>Q${index + 1}:</strong> ${q.question}</span>
-                        <div class="impacts">
-                            <span class="impact budget">Budget: ${q.budget}</span>
-                            <span class="impact mood">Mood: ${q.mood}</span>
-                            <span class="impact time">Time: ${q.time}s</span>
-                        </div>
-                    </div>
-                `;
+        let html = `<strong>Round ${data.id}</strong><br>`;
+        if (data.questions && data.questions.length) {
+            html += "<ul>";
+            data.questions.forEach(q => {
+                html += `<li>${q.question} | Mood: ${q.mood} | Time: ${q.time}</li>`;
             });
         } else {
             html += `<p>No questions loaded for this round.</p>`;
