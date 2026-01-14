@@ -12,6 +12,8 @@ ARDUINO_WC = ./Arduino/Main
 TTY_BACKEND = /tmp/ttyV0
 TTY_MOCK = /tmp/ttyV1
 
+CONTROLLER = /dev/ttyACM0
+
 create_venv:
 	python3 -m venv $(VENV)
 
@@ -22,7 +24,7 @@ update_deps:
 	$(PIP) freeze > requirements.txt
 
 start_backend:
-	$(PYTHON) $(BACKEND_WC)main.py
+	CONTROLLER_PATH="$(CONTROLLER)" $(PYTHON) $(BACKEND_WC)main.py
 
 test_backend:
 	$(PYTHON) -m pytest $(BACKEND_WC)
@@ -32,7 +34,7 @@ shell: create_venv
 
 start_mock_backend: create_venv
 	@echo "Starting socat + mock backend..."
-	@bash -c '\
+	@CONTROLLER_PATH="$(TTY_MOCK)" bash -c '\
 		set -e; \
 		socat -d -d \
 			PTY,link=$(TTY_BACKEND),raw,echo=0,mode=666 \

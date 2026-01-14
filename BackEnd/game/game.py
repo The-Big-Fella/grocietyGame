@@ -7,8 +7,10 @@ from game.rounds.round import Round
 from game.rounds.roundslist import RoundsList
 
 
+
 class Game:
-    def __init__(self, control_manager):
+    def __init__(self, control_manager, app):
+        self.app = app
         self.controls = control_manager
 
         self.budget = 100_000
@@ -34,37 +36,44 @@ class Game:
 
         print("Game started")
 
-    def _build_rounds(self):
+    def _build_rounds(self, current_event_id=2):  # Set default to 2 based on your data
         self.rounds.clear()
 
-        # Questions
-        q1 = Question("test1", 10, 10)
-        q2 = Question("test2", 10, -10)
-        q3 = Question("test3", 10, -10)
+        # 1. Fetch all rounds from the DB
+        all_rounds = self.app.db.get_rounds()
 
-        q4 = Question("test4", 10,  5)
-        q5 = Question("test5", 10, -5)
-        q6 = Question("test6", 10, -5)
+        # 2. Filter for the specific event
+        # This will now work because 'event_id' is present in your dict list!
+        event_rounds = [
+            r for r in all_rounds if r['event_id'] == current_event_id]
 
-        list1 = QuestionList()
-        list1.append(q1)
-        list1.append(q2)
-        list1.append(q3)
+        if not event_rounds:
+            print(f"Warning: No rounds found for Event ID {current_event_id}")
+            return
 
-        list2 = QuestionList()
-        
-        list2.append(q4)
-        list2.append(q5)
-        list2.append(q6)
+        # 3. Build the Linked List structure
+        for r_data in event_rounds:
+            # Create Round Node
+            new_round = Round(id=r_data['id'], round_type=r_data['event'])
 
-        r1 = Round(0, "questions")
-        r2 = Round(1, "storm")
+            # 4. Fetch questions for this round
+            questions_data = self.app.db.get_questions_by_round(r_data['id'])
 
-        r1.addEvent(list1)
-        r2.addEvent(list2)
+            q_list = QuestionList()
+            for q_data in questions_data:
+                new_question = Question(
+                    question=q_data['text'],
+                    time=10,
+                    budget=q_data['budget'],
+                    mood=q_data['mood']
+                )
+                q_list.append(new_question)
 
-        self.rounds.append(r1)
-        self.rounds.append(r2)
+            new_round.addEvent(q_list)
+            self.rounds.append(new_round)
+
+        print(f"Successfully loaded {self.rounds.size} rounds for event: {
+              event_rounds[0]['event']}")
 
     def update(self):
         if self.state != "running":
