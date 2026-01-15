@@ -92,3 +92,5 @@ class MoodDecay:
 
     def stop(self):
         self.running = False
+
+        

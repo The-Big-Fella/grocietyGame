@@ -26,7 +26,7 @@ async function load_round() {
       let event = data.event[j];
       setNodeListText(
         questions[i],
-        `${event.question} | ${event.mood} | ${event.budget}`,
+        `${event.question}`,
       );
     }
   }

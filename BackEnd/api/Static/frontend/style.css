@@ -87,6 +87,7 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: space-around; /* Spreads the 3 questions evenly */
+  text-align: center;
 }
 
 .question-item {

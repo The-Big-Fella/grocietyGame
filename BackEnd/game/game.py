@@ -41,8 +41,6 @@ class Game:
                 for question in event:
                     event_list.append({
                         "question": question.question,
-                        "budget": question.budget,
-                        "mood": question.mood,
                     })
 
             return round_data
