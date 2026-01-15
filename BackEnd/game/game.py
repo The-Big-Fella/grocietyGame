@@ -30,6 +30,24 @@ class Game:
         self.state = GameState.START
 
 
+    def get_current_round(self):
+        if isinstance(self.current_round, Round):
+            round_data = {
+                "round_type": self.current_round.round_type,
+            }
+            event = self.current_round.event
+            event_list = round_data["event"] = []
+            if isinstance(event, QuestionList):
+                for question in event:
+                    event_list.append({
+                        "question": question.question,
+                        "budget": question.budget,
+                        "mood": question.mood,
+                    })
+
+            return round_data
+        return None
+
     def get_state(self):
         return {
             "state": self.state.name.lower(),

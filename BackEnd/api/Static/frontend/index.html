@@ -2,12 +2,70 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Hello, world!</title>
+  <title>Tabletop Game - Active Play</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="description" content="" />
-  <link rel="icon" href="favicon.png">
+  <link rel="stylesheet" href="frontend/style.css">
 </head>
 <body>
-  <h1>Hello, world!</h1>
+
+  <div class="game-table">
+    
+    <div id="north" class="player-zone" data-player="north">
+      <h3>Player</h3>
+      <ul class="questions">
+        <li class="question-item-1">Loading active question...</li>
+        <li class="question-item-2">Loading active question...</li>
+        <li class="question-item-3">Loading active question...</li>
+      </ul>
+    </div>
+
+    <div id="west" class="player-zone" data-player="west">
+      <h3>Player</h3>
+      <ul class="questions">
+        <li class="question-item-1">Loading active question...</li>
+        <li class="question-item-2">Loading active question...</li>
+        <li class="question-item-3">Loading active question...</li>
+      </ul>
+    </div>
+
+    <div id="middle">
+      <div class="center-face face-north">
+        <div class="status-bar">GAME DATA</div>
+        <div class="shared-info">Mood: <span id="mood">--</span> | Budget: <span id="budget">--</span></div>
+      </div>
+      <div class="center-face face-east">
+        <div class="status-bar">GAME DATA</div>
+        <div class="shared-info">Mood: <span id="mood">--</span> | Budget: <span id="budget">--</span></div>
+      </div>
+      <div class="center-face face-west">
+        <div class="status-bar">GAME DATA</div>
+        <div class="shared-info">Mood: <span id="mood">--</span> | Budget: <span id="budget">--</span></div>
+      </div>
+      <div class="center-face face-south">
+        <div class="status-bar">GAME DATA</div>
+        <div class="shared-info">Mood: <span id="mood">--</span> | Budget: <span id="budget">--</span></div>
+      </div>
+    </div>
+
+    <div id="east" class="player-zone" data-player="east">
+      <h3>Player</h3>
+      <ul class="questions">
+        <li class="question-item-1">Loading active question...</li>
+        <li class="question-item-2">Loading active question...</li>
+        <li class="question-item-3">Loading active question...</li>
+      </ul>
+    </div>
+
+    <div id="south" class="player-zone" data-player="south">
+      <h3>Player</h3>
+      <ul class="questions">
+        <li class="question-item-1">Loading active question...</li>
+        <li class="question-item-2">Loading active question...</li>
+        <li class="question-item-3">Loading active question...</li>
+      </ul>
+    </div>
+
+  </div>
+  <script src="frontend/script.js"></script>
 </body>
 </html>
