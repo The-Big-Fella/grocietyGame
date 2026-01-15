@@ -43,6 +43,7 @@ class ControllerManager:
         return list(self.controllers.values())
 
     def check_consensus(self):
+        consensus = False
         if not self.controllers:
             return False
         for controller in self.controllers.values():
