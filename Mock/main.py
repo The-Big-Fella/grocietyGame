@@ -1,6 +1,7 @@
 
 import tkinter as tk
 from serial import Serial
+from time import sleep
 
 SERIAL_PORT = "/tmp/ttyV0"   # socat PTY
 BAUDRATE = 9600
@@ -100,6 +101,12 @@ class MockDevice:
 
         self.schedule_send()
         self.schedule_read()
+
+        sleep(1)
+        for i in self.panels:
+            panel = self.panels.get(i)
+            packet = self.build_packet(panel)
+            self.serial.write(packet)
 
     def on_slider_change(self):
         self.consensus_invalidated = True
