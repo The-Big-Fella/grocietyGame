@@ -7,11 +7,9 @@ class QuestionList(LinkedList):
 
 
 class Question(Node):
-    def __init__(self, question, budget, mood):
+    def __init__(self, question: str):
         super().__init__(self)
         self.question = question
-        self.budget = budget
-        self.mood = mood
 
     def __repr__(self):
         return self.question

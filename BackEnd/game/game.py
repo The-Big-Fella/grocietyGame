@@ -1,8 +1,9 @@
 from contextlib import contextmanager
 from enum import Enum, auto
 
+from game.Handlers import BudgetHandler
 from game.Handlers import MoodDecay
-from game.Rounds import Question, QuestionList, RoundsList, Round
+from game.rounds import Question, QuestionList, RoundsList, Round
 
 
 class GameState(Enum):
@@ -17,21 +18,23 @@ class Game:
         self.app = app
         self.controls = control_manager
 
-        self.budget = 100_000
-        self.mood = 100
+        self.total_budget = 100_000
+        self.mood = 100  # GLOBAL, persistent
 
         self.rounds = RoundsList()
         self.current_round = None
 
+        self.budget_handler = None
+        self.mood_decay = MoodDecay(self)
+        self.budget = self.current_round.round_budget if self.current_round else 1337
         self.state = GameState.START
 
-        self.mood_decay = MoodDecay(self)
 
     def get_state(self):
         return {
             "state": self.state.name.lower(),
             "mood": self.mood,
-            "budget": self.budget,
+            "budget": self.budget
         }
 
     def update(self):
@@ -49,7 +52,9 @@ class Game:
         """Initialize and start the game."""
         self._build_rounds()
         self.state = GameState.RUNNING
+        
         self.current_round = self.rounds.getNext()
+        self.budget = self.current_round.round_budget
 
         self.controls.reset_all()
         self.mood_decay.start()
@@ -84,14 +89,14 @@ class Game:
         self.rounds.clear()
 
         question_list = QuestionList()
-        question_list.append(Question("test1", 1000, 10))
-        question_list.append(Question("test2", 1000, -10))
-        question_list.append(Question("test3", 1000, -10))
+        question_list.append(Question("test1"))
+        question_list.append(Question("test2"))
+        question_list.append(Question("test3"))
 
-        round1 = Round(0, "questions")
+        round1 = Round(0, "questions",20000)
         round1.addEvent(question_list)
 
-        round2 = Round(1, "storm")
+        round2 = Round(1, "storm", 20000)
         round2.addEvent(question_list)
 
         self.rounds.append(round1)
@@ -103,21 +108,30 @@ class Game:
         if self.current_round is None:
             return
 
+        self.budget_handler = BudgetHandler(
+            total_budget=self.total_budget,
+            max_round_budget=self.current_round.round_budget,
+        )
+
+        self.budget_handler.reset_round()
         self.mood_decay.start_round()
         self.controls.reset_all()
 
         print(
             f"\n=== Starting Round {self.current_round.id} "
-            f"({self.current_round.round_type}) ==="
+            f"({self.current_round.round_type}) | "
+            f"Round budget: {self.current_round.round_budget} ==="
         )
 
-        event = self.current_round.getEvent()
-        if isinstance(event, QuestionList):
-            for q in event:
-                print(f"Question: {q.question} | cost: {q.budget}")
-
     def _end_current_round(self):
-        print(f"Ending Round {self.current_round.id}")
+        spent = self.budget_handler.spend_round_budget()
+        self.total_budget -= spent
+
+        print(
+            f"Ending Round {self.current_round.id} | "
+            f"Spent: {spent} | Remaining total budget: {self.total_budget}"
+        )
+
 
     def _end_game(self):
         self.state = GameState.START
