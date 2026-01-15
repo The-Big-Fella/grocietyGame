@@ -22,12 +22,10 @@ async function load_round() {
   const questions = [question1, question2, question3];
 
   for (let i = 0; i < questions.length; i++) {
-    for (let j = 0; j < data.event.length; j++) {
-      let event = data.event[j];
-      setNodeListText(
-        questions[i],
-        `${event.question}`,
-      );
+  if (i < data.event.length) {
+      setNodeListText(questions[i], data.event[i].question);
+    } else {
+      setNodeListText(questions[i], "");
     }
   }
 }
