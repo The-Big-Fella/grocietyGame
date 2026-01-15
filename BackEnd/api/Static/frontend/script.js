@@ -8,10 +8,11 @@ async function load_game_state() {
   setNodeListText(budgetElement, data.budget);
 }
 
+// ...existing code...
 async function load_round() {
   const res = await fetch("/current_round");
   const data = await res.json();
-  if (!data) {
+  if (!data || !data.event) {
     return;
   }
 
@@ -22,13 +23,15 @@ async function load_round() {
   const questions = [question1, question2, question3];
 
   for (let i = 0; i < questions.length; i++) {
-  if (i < data.event.length) {
-      setNodeListText(questions[i], data.event[i].question);
+    if (i < data.event.length) {
+      const q = data.event[i];
+      setNodeListText(questions[i], `❓Vraag: ${q.question} \n 💰Uitgegeven budget: ${q.spent_budget ?? 0}`);
     } else {
       setNodeListText(questions[i], "");
     }
   }
 }
+// ...existing code...
 
 function setNodeListText(nodelist, text) {
   nodelist.forEach((curr_val) => {
