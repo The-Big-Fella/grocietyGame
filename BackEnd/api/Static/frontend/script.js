@@ -6,6 +6,8 @@ async function load_game_state() {
   let budgetElement = document.querySelectorAll("#budget");
   setNodeListText(moodElement, data.mood);
   setNodeListText(budgetElement, data.budget);
+
+  return data.state;
 }
 
 async function load_round() {
@@ -38,5 +40,25 @@ function setNodeListText(nodelist, text) {
   });
 }
 
-load_game_state();
-load_round();
+async function startPolling() {
+  try {
+    const data = await load_game_state();
+    const playerZones = document.querySelectorAll(".player-zone");
+
+    if (data == "start") {
+      // Show the green buttons
+      playerZones.forEach((zone) => zone.classList.add("in-start-mode"));
+      console.log("Waiting to start...");
+    } else if (data == "running") {
+      // Hide the green buttons and load the round
+      playerZones.forEach((zone) => zone.classList.remove("in-start-mode"));
+      load_round();
+    }
+  } catch (error) {
+    console.error("Polling failed:", error);
+  }
+
+  setTimeout(startPolling, 200);
+}
+
+startPolling();
