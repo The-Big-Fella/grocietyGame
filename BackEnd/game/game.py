@@ -3,7 +3,7 @@ from enum import Enum, auto
 
 from game.Handlers import BudgetHandler
 from game.Handlers import MoodDecay
-from game.rounds import Question, QuestionList, RoundsList, Round
+from game.Rounds import Question, QuestionList, RoundsList, Round
 
 
 class GameState(Enum):
@@ -32,7 +32,6 @@ class Game:
         
         self.state = GameState.START
 
-
     def get_current_round(self):
         if isinstance(self.current_round, Round):
             round_data = {
@@ -52,6 +51,7 @@ class Game:
 
     def get_state(self):
         return {
+            "timer": self.mood_decay.get_timer_info(),
             "state": self.state.name.lower(),
             "mood": self.mood,
             "budget": self.budget
@@ -72,7 +72,7 @@ class Game:
         """Initialize and start the game."""
         self._build_rounds()
         self.state = GameState.RUNNING
-        
+
         self.current_round = self.rounds.getNext()
         self.budget = self.current_round.round_budget
 
@@ -113,7 +113,7 @@ class Game:
         question_list.append(Question("Moet de provincie extra budget vrijmaken om energiearmoede aan te pakken, ook als dit ten koste gaat van investeringen in infrastructuur of economie? "))
         question_list.append(Question("Moet de provincie meer geld herverdelen naar mensen met lage inkomens, ook als hogere inkomens daardoor meer moeten bijdragen? "))
 
-        round1 = Round(0, "questions",20000)
+        round1 = Round(0, "questions", 20000)
         round1.addEvent(question_list)
 
         question_list = QuestionList()
@@ -166,7 +166,6 @@ class Game:
             f"Ending Round {self.current_round.id} | "
             f"Spent: {spent} | Remaining total budget: {self.total_budget}"
         )
-
 
     def _end_game(self):
         self.state = GameState.START
