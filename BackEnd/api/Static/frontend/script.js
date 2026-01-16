@@ -60,7 +60,6 @@ async function load_round() {
     }
   }
 }
-// ...existing code...
 
 function setNodeListText(nodelist, text) {
   nodelist.forEach((curr_val) => {
