@@ -3,7 +3,8 @@ from enum import Enum, auto
 
 from game.Handlers import BudgetHandler
 from game.Handlers import MoodDecay
-from game.Rounds import Question, QuestionList, RoundsList, Round
+from game.rounds import Question, QuestionList, RoundsList, Round
+
 
 
 class GameState(Enum):
