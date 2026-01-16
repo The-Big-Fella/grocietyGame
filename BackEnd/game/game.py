@@ -23,10 +23,13 @@ class Game:
 
         self.rounds = RoundsList()
         self.current_round = None
-
-        self.budget_handler = None
-        self.mood_decay = MoodDecay(self)
         self.budget = self.current_round.round_budget if self.current_round else 1337
+        self.budget_handler = BudgetHandler(
+            total_budget=self.total_budget,
+            max_round_budget=0,
+        )
+        self.mood_decay = MoodDecay(self)
+        
         self.state = GameState.START
 
 
@@ -106,18 +109,33 @@ class Game:
         self.rounds.clear()
 
         question_list = QuestionList()
-        question_list.append(Question("test1"))
-        question_list.append(Question("test2"))
-        question_list.append(Question("test3"))
+        question_list.append(Question("Moet de provincie Groningen meer geld steken in schuldhulpverlening, ook als dit betekent dat mensen minder eigen verantwoordelijkheid nemen?"))
+        question_list.append(Question("Moet de provincie extra budget vrijmaken om energiearmoede aan te pakken, ook als dit ten koste gaat van investeringen in infrastructuur of economie? "))
+        question_list.append(Question("Moet de provincie meer geld herverdelen naar mensen met lage inkomens, ook als hogere inkomens daardoor meer moeten bijdragen? "))
 
         round1 = Round(0, "questions",20000)
         round1.addEvent(question_list)
 
+        question_list = QuestionList()
+        question_list.append(Question("test4"))
+        question_list.append(Question("test5"))
+        question_list.append(Question("test6"))
+
         round2 = Round(1, "storm", 20000)
         round2.addEvent(question_list)
 
+        question_list = QuestionList()
+        question_list.append(Question("test7"))
+        question_list.append(Question("test8"))
+        question_list.append(Question("test9"))
+
+        round3 = Round(2, "storm", 20000)
+        round3.addEvent(question_list)
+
         self.rounds.append(round1)
         self.rounds.append(round2)
+        self.rounds.append(round3)
+
 
     def _start_next_round(self):
         self.current_round = self.rounds.getNext()
