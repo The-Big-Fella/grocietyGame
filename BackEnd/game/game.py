@@ -3,7 +3,7 @@ from enum import Enum, auto
 
 from game.Handlers import BudgetHandler
 from game.Handlers import MoodDecay
-from game.rounds import Question, QuestionList, RoundsList, Round
+from game.Rounds import Question, QuestionList, RoundsList, Round
 
 
 class GameState(Enum):
@@ -29,7 +29,6 @@ class Game:
         self.budget = self.current_round.round_budget if self.current_round else 1337
         self.state = GameState.START
 
-
     def get_current_round(self):
         if isinstance(self.current_round, Round):
             round_data = {
@@ -49,6 +48,7 @@ class Game:
 
     def get_state(self):
         return {
+            "timer": self.mood_decay.get_timer_info(),
             "state": self.state.name.lower(),
             "mood": self.mood,
             "budget": self.budget
@@ -69,7 +69,7 @@ class Game:
         """Initialize and start the game."""
         self._build_rounds()
         self.state = GameState.RUNNING
-        
+
         self.current_round = self.rounds.getNext()
         self.budget = self.current_round.round_budget
 
@@ -110,7 +110,7 @@ class Game:
         question_list.append(Question("test2"))
         question_list.append(Question("test3"))
 
-        round1 = Round(0, "questions",20000)
+        round1 = Round(0, "questions", 20000)
         round1.addEvent(question_list)
 
         round2 = Round(1, "storm", 20000)
@@ -148,7 +148,6 @@ class Game:
             f"Ending Round {self.current_round.id} | "
             f"Spent: {spent} | Remaining total budget: {self.total_budget}"
         )
-
 
     def _end_game(self):
         self.state = GameState.START

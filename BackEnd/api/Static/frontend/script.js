@@ -2,15 +2,39 @@ async function load_game_state() {
   const res = await fetch("/game_state");
   const data = await res.json();
 
-  let moodElement = document.querySelectorAll("#mood");
-  let budgetElement = document.querySelectorAll("#budget");
-  setNodeListText(moodElement, data.mood);
-  setNodeListText(budgetElement, data.budget);
+  console.log(data);
+
+  // Top level data
+  let moodElements = document.querySelectorAll("#mood");
+  let budgetElements = document.querySelectorAll("#budget");
+
+  // Timer module data (nested)
+  let timerElements = document.querySelectorAll("#timer");
+  let penaltyElements = document.querySelectorAll("#penalty-cost");
+  let remainingElements = document.querySelectorAll("#remaining-events");
+
+  // Setting the values
+  setNodeListText(moodElements, data.mood);
+  setNodeListText(budgetElements, data.budget);
+
+  if (data.timer) {
+    // Time remaining (rounded to whole number for cleaner UI)
+    const timeLeft = Math.max(
+      0,
+      Math.floor(data.timer.next_penalty.time_remaining),
+    );
+    setNodeListText(timerElements, timeLeft + "s");
+
+    // How much mood you lose next
+    setNodeListText(penaltyElements, data.timer.next_penalty.amount);
+
+    // How many timers/events are left
+    setNodeListText(remainingElements, data.timer.timeline.events_remaining);
+  }
 
   return data.state;
 }
 
-// ...existing code...
 async function load_round() {
   const res = await fetch("/current_round");
   const data = await res.json();
@@ -27,7 +51,10 @@ async function load_round() {
   for (let i = 0; i < questions.length; i++) {
     if (i < data.event.length) {
       const q = data.event[i];
-      setNodeListText(questions[i], `❓Vraag: ${q.question} \n 💰Uitgegeven budget: ${q.spent_budget ?? 0}`);
+      setNodeListText(
+        questions[i],
+        `❓Vraag: ${q.question} \n 💰Uitgegeven budget: ${q.spent_budget ?? 0}`,
+      );
     } else {
       setNodeListText(questions[i], "");
     }
