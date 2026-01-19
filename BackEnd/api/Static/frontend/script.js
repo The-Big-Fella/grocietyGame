@@ -18,17 +18,14 @@ async function load_game_state() {
   setNodeListText(budgetElements, data.budget);
 
   if (data.timer) {
-    // Time remaining (rounded to whole number for cleaner UI)
     const timeLeft = Math.max(
       0,
       Math.floor(data.timer.next_penalty.time_remaining),
     );
     setNodeListText(timerElements, timeLeft + "s");
 
-    // How much mood you lose next
     setNodeListText(penaltyElements, data.timer.next_penalty.amount);
 
-    // How many timers/events are left
     setNodeListText(remainingElements, data.timer.timeline.events_remaining);
   }
 

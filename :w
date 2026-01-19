@@ -1,0 +1,272 @@
+
+#include <Arduino.h>
+
+// ---------- Pin definities ----------
+// Potmeters
+#define POT1_PIN A0
+#define POT2_PIN A1
+#define POT3_PIN A3
+#define POT4_PIN A4
+#define POT5_PIN A5
+#define POT6_PIN A6
+
+// Motorfader A
+#define AIN1 22
+#define AIN2 23
+#define PWMA 5
+
+// Motorfader B
+#define BIN1 26
+#define BIN2 27
+#define PWMB 6
+
+// Motorfader C
+#define CIN1 28
+#define CIN2 29
+#define PWMC 7
+
+// Motorfader D
+#define DIN1 32
+#define DIN2 33
+#define PWMD 8
+
+// Motorfader E
+#define EIN1 34
+#define EIN2 35
+#define PWME 9
+
+// Motorfader F
+#define FIN1 38
+#define FIN2 39
+#define PWMF 10
+
+// Standby pins
+#define STBY_PIN 24
+#define STBY_PIN2 30
+#define STBY_PIN3 36
+
+// ---------- Configuratie ----------
+#define DEADZONE 20
+#define PWM_MAX 170
+#define PWM_MIN 50
+#define HAND_THRESHOLD 5
+#define LPF_ALPHA 0.2
+
+const int THRESHOLD_TOP = 900;
+const int THRESHOLD_BOTTOM = 100;
+
+const unsigned long FOLLOW_INTERVAL = 20;
+const unsigned long SERIAL_INTERVAL = 200;
+
+// ---------- Variabelen ----------
+unsigned long lastFollowTime = 0;
+unsigned long lastSerialTime = 0;
+
+int lastRawPosA = 0, lastRawPosB = 0, lastRawPosC = 0;
+int lastRawPosD = 0, lastRawPosE = 0, lastRawPosF = 0;
+
+float posAFiltered = 0, posBFiltered = 0, posCFiltered = 0;
+float posDFiltered = 0, posEFiltered = 0, posFFiltered = 0;
+
+int masterSlider = 0;
+
+// ---------- Functies ----------
+float lowPassFilter(int raw, float prev){
+  return LPF_ALPHA * raw + (1.0 - LPF_ALPHA) * prev;
+}
+
+void driveMotor(int current, int target, int pinA, int pinB, int pwmPin, bool inverted = false){
+  int diff = target - current;
+
+  if(abs(diff) <= DEADZONE){
+    analogWrite(pwmPin, 0);
+    return;
+  }
+
+  bool forward = diff > 0;
+  if(inverted) forward = !forward;
+
+  digitalWrite(pinA, forward ? HIGH : LOW);
+  digitalWrite(pinB, forward ? LOW : HIGH);
+
+  int pwm = map(abs(diff), DEADZONE, THRESHOLD_TOP - THRESHOLD_BOTTOM, PWM_MIN, PWM_MAX);
+  pwm = constrain(pwm, PWM_MIN, PWM_MAX);
+  analogWrite(pwmPin, pwm);
+}
+
+char masterToChar(int master){
+  switch(master){
+    case 1: return 'A';
+    case 2: return 'B';
+    case 3: return 'C';
+    case 4: return 'D';
+    case 5: return 'E';
+    case 6: return 'F';
+    default: return '-';
+  }
+}
+
+// ---------- Setup ----------
+void setup(){
+  pinMode(AIN1, OUTPUT); pinMode(AIN2, OUTPUT); pinMode(PWMA, OUTPUT);
+  pinMode(BIN1, OUTPUT); pinMode(BIN2, OUTPUT); pinMode(PWMB, OUTPUT);
+  pinMode(CIN1, OUTPUT); pinMode(CIN2, OUTPUT); pinMode(PWMC, OUTPUT);
+  pinMode(DIN1, OUTPUT); pinMode(DIN2, OUTPUT); pinMode(PWMD, OUTPUT);
+  pinMode(EIN1, OUTPUT); pinMode(EIN2, OUTPUT); pinMode(PWME, OUTPUT);
+  pinMode(FIN1, OUTPUT); pinMode(FIN2, OUTPUT); pinMode(PWMF, OUTPUT);
+
+  pinMode(STBY_PIN, OUTPUT);
+  pinMode(STBY_PIN2, OUTPUT);
+  pinMode(STBY_PIN3, OUTPUT);
+
+  digitalWrite(STBY_PIN, HIGH);
+  digitalWrite(STBY_PIN2, HIGH);
+  digitalWrite(STBY_PIN3, HIGH);
+
+  Serial.begin(9600);
+
+  lastRawPosA = analogRead(POT1_PIN);
+  lastRawPosB = analogRead(POT2_PIN);
+  lastRawPosC = analogRead(POT3_PIN);
+  lastRawPosD = analogRead(POT4_PIN);
+  lastRawPosE = analogRead(POT5_PIN);
+  lastRawPosF = analogRead(POT6_PIN);
+
+  posAFiltered = lastRawPosA;
+  posBFiltered = lastRawPosB;
+  posCFiltered = lastRawPosC;
+  posDFiltered = lastRawPosD;
+  posEFiltered = lastRawPosE;
+  posFFiltered = lastRawPosF;
+}
+
+// ---------- Loop ----------
+void loop(){
+  unsigned long now = millis();
+
+  int rawA = constrain(analogRead(POT1_PIN), THRESHOLD_BOTTOM, THRESHOLD_TOP);
+  int rawB = constrain(analogRead(POT2_PIN), THRESHOLD_BOTTOM, THRESHOLD_TOP);
+  int rawC = constrain(analogRead(POT3_PIN), THRESHOLD_BOTTOM, THRESHOLD_TOP);
+  int rawD = constrain(analogRead(POT4_PIN), THRESHOLD_BOTTOM, THRESHOLD_TOP);
+  int rawE = constrain(analogRead(POT5_PIN), THRESHOLD_BOTTOM, THRESHOLD_TOP);
+  int rawF = constrain(analogRead(POT6_PIN), THRESHOLD_BOTTOM, THRESHOLD_TOP);
+
+  // -------- Detecteer echte handbeweging (raw vs motorpositie) --------
+  bool humanMoveA = abs(rawA - posAFiltered) > HAND_THRESHOLD;
+  bool humanMoveB = abs(rawB - posBFiltered) > HAND_THRESHOLD;
+  bool humanMoveC = abs(rawC - posCFiltered) > HAND_THRESHOLD;
+  bool humanMoveD = abs(rawD - posDFiltered) > HAND_THRESHOLD;
+  bool humanMoveE = abs(rawE - posEFiltered) > HAND_THRESHOLD;
+  bool humanMoveF = abs(rawF - posFFiltered) > HAND_THRESHOLD;
+
+  // -------- Master takeover logica --------
+  if(humanMoveA && !humanMoveB && !humanMoveC && !humanMoveD && !humanMoveE && !humanMoveF) masterSlider = 1;
+  else if(humanMoveB && !humanMoveA && !humanMoveC && !humanMoveD && !humanMoveE && !humanMoveF) masterSlider = 2;
+  else if(humanMoveC && !humanMoveA && !humanMoveB && !humanMoveD && !humanMoveE && !humanMoveF) masterSlider = 3;
+  else if(humanMoveD && !humanMoveA && !humanMoveB && !humanMoveC && !humanMoveE && !humanMoveF) masterSlider = 4;
+  else if(humanMoveE && !humanMoveA && !humanMoveB && !humanMoveC && !humanMoveD && !humanMoveF) masterSlider = 5;
+  else if(humanMoveF && !humanMoveA && !humanMoveB && !humanMoveC && !humanMoveD && !humanMoveE) masterSlider = 6;
+
+  // -------- Low-pass filtering --------
+  posAFiltered = lowPassFilter(rawA, posAFiltered);
+  posBFiltered = lowPassFilter(rawB, posBFiltered);
+  posCFiltered = lowPassFilter(rawC, posCFiltered);
+  posDFiltered = lowPassFilter(rawD, posDFiltered);
+  posEFiltered = lowPassFilter(rawE, posEFiltered);
+  posFFiltered = lowPassFilter(rawF, posFFiltered);
+
+  // -------- Motor aansturing --------
+  if(now - lastFollowTime >= FOLLOW_INTERVAL){
+    lastFollowTime = now;
+
+    switch(masterSlider){
+      case 1:
+        driveMotor(posBFiltered, rawA, BIN1, BIN2, PWMB, true);
+        driveMotor(posCFiltered, rawA, CIN1, CIN2, PWMC, true);
+        driveMotor(posDFiltered, rawA, DIN1, DIN2, PWMD, true);
+        driveMotor(posEFiltered, rawA, EIN1, EIN2, PWME, true);
+        driveMotor(posFFiltered, rawA, FIN1, FIN2, PWMF, true);
+        analogWrite(PWMA, 0);
+        break;
+      case 2:
+        driveMotor(posAFiltered, rawB, AIN1, AIN2, PWMA, true);
+        driveMotor(posCFiltered, rawB, CIN1, CIN2, PWMC, true);
+        driveMotor(posDFiltered, rawB, DIN1, DIN2, PWMD, true);
+        driveMotor(posEFiltered, rawB, EIN1, EIN2, PWME, true);
+        driveMotor(posFFiltered, rawB, FIN1, FIN2, PWMF, true);
+        analogWrite(PWMB, 0);
+        break;
+      case 3:
+        driveMotor(posAFiltered, rawC, AIN1, AIN2, PWMA, true);
+        driveMotor(posBFiltered, rawC, BIN1, BIN2, PWMB, true);
+        driveMotor(posDFiltered, rawC, DIN1, DIN2, PWMD, true);
+        driveMotor(posEFiltered, rawC, EIN1, EIN2, PWME, true);
+        driveMotor(posFFiltered, rawC, FIN1, FIN2, PWMF, true);
+        analogWrite(PWMC, 0);
+        break;
+      case 4:
+        driveMotor(posAFiltered, rawD, AIN1, AIN2, PWMA, true);
+        driveMotor(posBFiltered, rawD, BIN1, BIN2, PWMB, true);
+        driveMotor(posCFiltered, rawD, CIN1, CIN2, PWMC, true);
+        driveMotor(posEFiltered, rawD, EIN1, EIN2, PWME, true);
+        driveMotor(posFFiltered, rawD, FIN1, FIN2, PWMF, true);
+        analogWrite(PWMD, 0);
+        break;
+      case 5:
+        driveMotor(posAFiltered, rawE, AIN1, AIN2, PWMA, true);
+        driveMotor(posBFiltered, rawE, BIN1, BIN2, PWMB, true);
+        driveMotor(posCFiltered, rawE, CIN1, CIN2, PWMC, true);
+        driveMotor(posDFiltered, rawE, DIN1, DIN2, PWMD, true);
+        driveMotor(posFFiltered, rawE, FIN1, FIN2, PWMF, true);
+        analogWrite(PWME, 0);
+        break;
+      case 6:
+        driveMotor(posAFiltered, rawF, AIN1, AIN2, PWMA, true);
+        driveMotor(posBFiltered, rawF, BIN1, BIN2, PWMB, true);
+        driveMotor(posCFiltered, rawF, CIN1, CIN2, PWMC, true);
+        driveMotor(posDFiltered, rawF, DIN1, DIN2, PWMD, true);
+        driveMotor(posEFiltered, rawF, EIN1, EIN2, PWME, true);
+        analogWrite(PWMF, 0);
+        break;
+      default:
+        analogWrite(PWMA, 0);
+        analogWrite(PWMB, 0);
+        analogWrite(PWMC, 0);
+        analogWrite(PWMD, 0);
+        analogWrite(PWME, 0);
+        analogWrite(PWMF, 0);
+        break;
+    }
+  }
+
+  // -------- Serial debug --------
+  if(now - lastSerialTime >= SERIAL_INTERVAL){
+    lastSerialTime = now;
+
+    Serial.print("POTS | ");
+    Serial.print("A: "); Serial.print(rawA);
+    Serial.print(" B: "); Serial.print(rawB);
+    Serial.print(" C: "); Serial.print(rawC);
+    Serial.print(" D: "); Serial.print(rawD);
+    Serial.print(" E: "); Serial.print(rawE);
+    Serial.print(" F: "); Serial.print(rawF);
+    Serial.print(" || MASTER: "); Serial.print(masterToChar(masterSlider));
+
+    Serial.print(" | HAND: ");
+    Serial.print(humanMoveA ? "A" : "-");
+    Serial.print(humanMoveB ? "B" : "-");
+    Serial.print(humanMoveC ? "C" : "-");
+    Serial.print(humanMoveD ? "D" : "-");
+    Serial.print(humanMoveE ? "E" : "-");
+    Serial.println(humanMoveF ? "F" : "-");
+  }
+
+  lastRawPosA = rawA;
+  lastRawPosB = rawB;
+  lastRawPosC = rawC;
+  lastRawPosD = rawD;
+  lastRawPosE = rawE;
+  lastRawPosF = rawF;
+
+  delay(20);
+}

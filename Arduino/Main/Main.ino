@@ -1,108 +1,211 @@
-#define SYNC 0xAA
-#define MSG 0x00
-#define MSG_RESET 0x01
 
-struct Controls {
-  uint8_t id;
-  uint8_t slider[3];
-  bool button;
-};
 
-struct ControlPanel {
-  Controls panels[4];
-};
+#include <Arduino.h>
 
-Controls panel1 = {1, {50, 50, 50}, 0};
+// ---------- Protocol ----------
+#define SYNC       0xAA
+#define MSG        0x00
+#define MSG_RESET  0x01
+#define CONTROLLER_ALL 0xFF
 
-Controls last_sent = {0, {255, 255, 255}, true}; // impossible initial values
+#define SLIDER_CENTER 512
 
-unsigned long last_update = 0; // track time
-const unsigned long UPDATE_INTERVAL = 1000; // 1 second
+// ---------- Pins ----------
+#define POT1_PIN A0
+#define POT2_PIN A1
+#define POT3_PIN A3
+#define POT4_PIN A4
+#define POT5_PIN A5
+#define POT6_PIN A6
 
-void setup() {
-  Serial.begin(9600);
-  delay(1000);
+#define AIN1 22
+#define AIN2 23
+#define PWMA 5
+#define BIN1 26
+#define BIN2 27
+#define PWMB 6
+#define CIN1 28
+#define CIN2 29
+#define PWMC 7
+#define DIN1 32
+#define DIN2 33
+#define PWMD 8
+#define EIN1 34
+#define EIN2 35
+#define PWME 9
+#define FIN1 38
+#define FIN2 39
+#define PWMF 10
+
+#define STBY_PIN 24
+#define STBY_PIN2 30
+#define STBY_PIN3 36
+
+// ---------- Config ----------
+#define DEADZONE 20
+#define PWM_MAX 170
+#define PWM_MIN 50
+#define HAND_THRESHOLD 5
+#define LPF_ALPHA 0.2
+
+const int THRESHOLD_TOP = 900;
+const int THRESHOLD_BOTTOM = 100;
+const unsigned long FOLLOW_INTERVAL = 20;
+
+// ---------- State ----------
+unsigned long lastFollowTime = 0;
+unsigned long startupTime = 0;
+
+float pos[6];
+int raw[6];
+int target[6];
+
+bool resetActive = true;
+bool startupButtonsSent = false;
+
+// Controller buttons
+bool buttonState[2] = {0, 0};
+
+// ---------- Serial RX ----------
+uint8_t rxBuffer[8];
+uint8_t rxIndex = 0;
+
+// ---------- Helpers ----------
+float lowPassFilter(int raw, float prev) {
+  return LPF_ALPHA * raw + (1.0 - LPF_ALPHA) * prev;
 }
 
-void loop() {
-  unsigned long now = millis();
+void driveMotor(int current, int target, int pinA, int pinB, int pwmPin, bool inverted = false) {
+  int diff = target - current;
+  if (abs(diff) <= DEADZONE) {
+    analogWrite(pwmPin, 0);
+    return;
+  }
 
-  // Update sliders every second
-  if (now - last_update >= UPDATE_INTERVAL) {
-    last_update = now;
+  bool forward = diff > 0;
+  if (inverted) forward = !forward;
 
-    // Example: increment sliders by 1, wrap around 0–255
-    for (uint8_t i = 0; i < 3; i++) {
-      panel1.slider[i] = (panel1.slider[i] + 1) % 256;
+  digitalWrite(pinA, forward ? HIGH : LOW);
+  digitalWrite(pinB, forward ? LOW : HIGH);
+
+  int pwm = map(abs(diff), DEADZONE, THRESHOLD_TOP - THRESHOLD_BOTTOM, PWM_MIN, PWM_MAX);
+  pwm = constrain(pwm, PWM_MIN, PWM_MAX);
+  analogWrite(pwmPin, pwm);
+}
+
+// ---------- Packet send ----------
+void sendButtonPacket(uint8_t controllerId, bool value) {
+  uint8_t packet[8];
+  uint8_t idx = 0;
+
+  packet[idx++] = SYNC;
+  packet[idx++] = MSG;
+  packet[idx++] = controllerId;
+  packet[idx++] = 1;      // one control
+  packet[idx++] = 3;      // button id
+  packet[idx++] = value ? 1 : 0;
+
+  Serial.write(packet, idx);
+}
+
+// ---------- RESET ----------
+void handleReset(uint8_t controllerId) {
+  for (int i = 0; i < 6; i++) {
+    target[i] = SLIDER_CENTER;
+  }
+
+  // Reset buttons
+  buttonState[0] = 0;
+  buttonState[1] = 0;
+
+  sendButtonPacket(0, 0);
+  sendButtonPacket(1, 0);
+
+  resetActive = true;
+}
+
+// ---------- SERIAL PARSE ----------
+void parseSerial() {
+  while (Serial.available()) {
+    uint8_t b = Serial.read();
+    rxBuffer[rxIndex++] = b;
+
+    if (rxIndex >= 4 &&
+        rxBuffer[0] == SYNC &&
+        rxBuffer[1] == MSG_RESET) {
+
+      handleReset(rxBuffer[2]);
+      rxIndex = 0;
     }
-  }
 
-  // Send packet only if changed
-  if (hasChanged(panel1, last_sent)) {
-    sendControlPacket(panel1);
-    copyControls(panel1, last_sent);
+    if (rxIndex >= sizeof(rxBuffer)) rxIndex = 0;
   }
 }
 
-// Check if current state differs from last sent
-bool hasChanged(const Controls& current, const Controls& last) {
-  if (current.id != last.id) return true;
-  for (uint8_t i = 0; i < 3; i++) {
-    if (current.slider[i] != last.slider[i]) return true;
+// ---------- SETUP ----------
+void setup() {
+  pinMode(AIN1, OUTPUT); pinMode(AIN2, OUTPUT); pinMode(PWMA, OUTPUT);
+  pinMode(BIN1, OUTPUT); pinMode(BIN2, OUTPUT); pinMode(PWMB, OUTPUT);
+  pinMode(CIN1, OUTPUT); pinMode(CIN2, OUTPUT); pinMode(PWMC, OUTPUT);
+  pinMode(DIN1, OUTPUT); pinMode(DIN2, OUTPUT); pinMode(PWMD, OUTPUT);
+  pinMode(EIN1, OUTPUT); pinMode(EIN2, OUTPUT); pinMode(PWME, OUTPUT);
+  pinMode(FIN1, OUTPUT); pinMode(FIN2, OUTPUT); pinMode(PWMF, OUTPUT);
+
+  pinMode(STBY_PIN, OUTPUT);
+  pinMode(STBY_PIN2, OUTPUT);
+  pinMode(STBY_PIN3, OUTPUT);
+
+  digitalWrite(STBY_PIN, HIGH);
+  digitalWrite(STBY_PIN2, HIGH);
+  digitalWrite(STBY_PIN3, HIGH);
+
+  Serial.begin(9600);
+
+  for (int i = 0; i < 6; i++) {
+    pos[i] = SLIDER_CENTER;
+    raw[i] = SLIDER_CENTER;
+    target[i] = SLIDER_CENTER;
   }
-  if (current.button != last.button) return true;
-  return false;
+
+  startupTime = millis();
 }
 
-// Copy current state to last_sent
-void copyControls(const Controls& src, Controls& dest) {
-  dest.id = src.id;
-  for (uint8_t i = 0; i < 3; i++) {
-    dest.slider[i] = src.slider[i];
-  }
-  dest.button = src.button;
-}
+// ---------- LOOP ----------
+void loop() {
+  parseSerial();
 
-// Create packet from Controls
-uint8_t* createPacket(const Controls& ctrl, uint8_t& packet_len) {
-  const uint8_t control_count = 4; // 3 sliders + button
-  packet_len = 4 + control_count * 2;
+  // Read pots
+  raw[0] = constrain(analogRead(POT1_PIN), THRESHOLD_BOTTOM, THRESHOLD_TOP);
+  raw[1] = constrain(analogRead(POT2_PIN), THRESHOLD_BOTTOM, THRESHOLD_TOP);
+  raw[2] = constrain(analogRead(POT3_PIN), THRESHOLD_BOTTOM, THRESHOLD_TOP);
+  raw[3] = constrain(analogRead(POT4_PIN), THRESHOLD_BOTTOM, THRESHOLD_TOP);
+  raw[4] = constrain(analogRead(POT5_PIN), THRESHOLD_BOTTOM, THRESHOLD_TOP);
+  raw[5] = constrain(analogRead(POT6_PIN), THRESHOLD_BOTTOM, THRESHOLD_TOP);
 
-  static uint8_t packet[12];
-  uint8_t index = 0;
-
-  packet[index++] = SYNC;
-  packet[index++] = MSG;
-  packet[index++] = ctrl.id;
-  packet[index++] = control_count;
-
-  // Add sliders
-  for (uint8_t i = 0; i < 3; i++) {
-    packet[index++] = i;
-    packet[index++] = ctrl.slider[i];
+  for (int i = 0; i < 6; i++) {
+    pos[i] = lowPassFilter(raw[i], pos[i]);
   }
 
-  // Add button
-  packet[index++] = 3;
-  packet[index++] = ctrl.button ? 1 : 0;
+  // Send startup buttons after 5 seconds
+  if (!startupButtonsSent && millis() - startupTime >= 5000) {
+    buttonState[0] = 1;
+    buttonState[1] = 1;
 
-  return packet;
-}
+    sendButtonPacket(0, 1);
+    sendButtonPacket(1, 1);
 
-// Send packet
-void sendControlPacket(const Controls& ctrl) {
-  uint8_t packet_len;
-  uint8_t* packet = createPacket(ctrl, packet_len);
-
-  Serial.write(packet, packet_len);
-  Serial.flush();
-
-  // Debug
-  Serial.print("Packet sent: ");
-  for (uint8_t i = 0; i < packet_len; i++) {
-    Serial.print(packet[i], HEX);
-    Serial.print(" ");
+    startupButtonsSent = true;
   }
-  Serial.println();
+
+  if (millis() - lastFollowTime >= FOLLOW_INTERVAL) {
+    lastFollowTime = millis();
+
+    driveMotor(pos[0], target[0], AIN1, AIN2, PWMA, true);
+    driveMotor(pos[1], target[1], BIN1, BIN2, PWMB, true);
+    driveMotor(pos[2], target[2], CIN1, CIN2, PWMC, true);
+    driveMotor(pos[3], target[3], DIN1, DIN2, PWMD, true);
+    driveMotor(pos[4], target[4], EIN1, EIN2, PWME, true);
+    driveMotor(pos[5], target[5], FIN1, FIN2, PWMF, true);
+  }
 }
 
