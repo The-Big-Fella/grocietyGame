@@ -1,16 +1,22 @@
 
-
 #include <Arduino.h>
 
-// ---------- Protocol ----------
-#define SYNC       0xAA
-#define MSG        0x00
-#define MSG_RESET  0x01
-#define CONTROLLER_ALL 0xFF
+/* =========================================================
+   SERIAL PROTOCOL
+   ========================================================= */
+#define SYNC 0xAA
+#define MSG  0x00
 
-#define SLIDER_CENTER 512
+struct Controls {
+  uint8_t id;
+  uint8_t slider[3];
+  bool button;
+};
 
-// ---------- Pins ----------
+/* =========================================================
+   PIN DEFINITIONS
+   ========================================================= */
+// Potmeters
 #define POT1_PIN A0
 #define POT2_PIN A1
 #define POT3_PIN A3
@@ -18,30 +24,44 @@
 #define POT5_PIN A5
 #define POT6_PIN A6
 
+// Motorfader A
 #define AIN1 22
 #define AIN2 23
 #define PWMA 5
+
+// Motorfader B
 #define BIN1 26
 #define BIN2 27
 #define PWMB 6
+
+// Motorfader C
 #define CIN1 28
 #define CIN2 29
 #define PWMC 7
+
+// Motorfader D
 #define DIN1 32
 #define DIN2 33
 #define PWMD 8
+
+// Motorfader E
 #define EIN1 34
 #define EIN2 35
 #define PWME 9
+
+// Motorfader F
 #define FIN1 38
 #define FIN2 39
 #define PWMF 10
 
+// Standby pins
 #define STBY_PIN 24
 #define STBY_PIN2 30
 #define STBY_PIN3 36
 
-// ---------- Config ----------
+/* =========================================================
+   CONFIGURATION
+   ========================================================= */
 #define DEADZONE 20
 #define PWM_MAX 170
 #define PWM_MIN 50
@@ -50,33 +70,36 @@
 
 const int THRESHOLD_TOP = 900;
 const int THRESHOLD_BOTTOM = 100;
+
 const unsigned long FOLLOW_INTERVAL = 20;
 
-// ---------- State ----------
+/* =========================================================
+   VARIABLES
+   ========================================================= */
 unsigned long lastFollowTime = 0;
-unsigned long startupTime = 0;
 
-float pos[6];
-int raw[6];
-int target[6];
+float posAFiltered = 0, posBFiltered = 0, posCFiltered = 0;
+float posDFiltered = 0, posEFiltered = 0, posFFiltered = 0;
 
-bool resetActive = true;
-bool startupButtonsSent = false;
+int masterSlider = 0;
 
-// Controller buttons
-bool buttonState[2] = {0, 0};
+/* -------- Controllers -------- */
+Controls ctrl1 = {1, {0, 0, 0}, false};   // A B C
+Controls ctrl2 = {2, {0, 0, 0}, false};   // D E F
 
-// ---------- Serial RX ----------
-uint8_t rxBuffer[8];
-uint8_t rxIndex = 0;
+Controls lastSent1 = {1, {255, 255, 255}, true};
+Controls lastSent2 = {2, {255, 255, 255}, true};
 
-// ---------- Helpers ----------
+/* =========================================================
+   HELPER FUNCTIONS
+   ========================================================= */
 float lowPassFilter(int raw, float prev) {
   return LPF_ALPHA * raw + (1.0 - LPF_ALPHA) * prev;
 }
 
 void driveMotor(int current, int target, int pinA, int pinB, int pwmPin, bool inverted = false) {
   int diff = target - current;
+
   if (abs(diff) <= DEADZONE) {
     analogWrite(pwmPin, 0);
     return;
@@ -88,61 +111,59 @@ void driveMotor(int current, int target, int pinA, int pinB, int pwmPin, bool in
   digitalWrite(pinA, forward ? HIGH : LOW);
   digitalWrite(pinB, forward ? LOW : HIGH);
 
-  int pwm = map(abs(diff), DEADZONE, THRESHOLD_TOP - THRESHOLD_BOTTOM, PWM_MIN, PWM_MAX);
+  int pwm = map(abs(diff), DEADZONE,
+                THRESHOLD_TOP - THRESHOLD_BOTTOM,
+                PWM_MIN, PWM_MAX);
+
   pwm = constrain(pwm, PWM_MIN, PWM_MAX);
   analogWrite(pwmPin, pwm);
 }
 
-// ---------- Packet send ----------
-void sendButtonPacket(uint8_t controllerId, bool value) {
-  uint8_t packet[8];
+/* =========================================================
+   PACKET FUNCTIONS
+   ========================================================= */
+bool hasChanged(const Controls& a, const Controls& b) {
+  for (uint8_t i = 0; i < 3; i++) {
+    if (a.slider[i] != b.slider[i]) return true;
+  }
+  return a.button != b.button;
+}
+
+void copyControls(const Controls& src, Controls& dst) {
+  for (uint8_t i = 0; i < 3; i++) dst.slider[i] = src.slider[i];
+  dst.button = src.button;
+}
+
+uint8_t* createPacket(const Controls& ctrl, uint8_t& len) {
+  static uint8_t packet[12];
   uint8_t idx = 0;
 
   packet[idx++] = SYNC;
   packet[idx++] = MSG;
-  packet[idx++] = controllerId;
-  packet[idx++] = 1;      // one control
-  packet[idx++] = 3;      // button id
-  packet[idx++] = value ? 1 : 0;
+  packet[idx++] = ctrl.id;
+  packet[idx++] = 4; // 3 sliders + button
 
-  Serial.write(packet, idx);
-}
-
-// ---------- RESET ----------
-void handleReset(uint8_t controllerId) {
-  for (int i = 0; i < 6; i++) {
-    target[i] = SLIDER_CENTER;
+  for (uint8_t i = 0; i < 3; i++) {
+    packet[idx++] = i;
+    packet[idx++] = ctrl.slider[i];
   }
 
-  // Reset buttons
-  buttonState[0] = 0;
-  buttonState[1] = 0;
+  packet[idx++] = 3;
+  packet[idx++] = ctrl.button ? 1 : 0;
 
-  sendButtonPacket(0, 0);
-  sendButtonPacket(1, 0);
-
-  resetActive = true;
+  len = idx;
+  return packet;
 }
 
-// ---------- SERIAL PARSE ----------
-void parseSerial() {
-  while (Serial.available()) {
-    uint8_t b = Serial.read();
-    rxBuffer[rxIndex++] = b;
-
-    if (rxIndex >= 4 &&
-        rxBuffer[0] == SYNC &&
-        rxBuffer[1] == MSG_RESET) {
-
-      handleReset(rxBuffer[2]);
-      rxIndex = 0;
-    }
-
-    if (rxIndex >= sizeof(rxBuffer)) rxIndex = 0;
-  }
+void sendControlPacket(const Controls& ctrl) {
+  uint8_t len;
+  uint8_t* p = createPacket(ctrl, len);
+  Serial.write(p, len);
 }
 
-// ---------- SETUP ----------
+/* =========================================================
+   SETUP
+   ========================================================= */
 void setup() {
   pinMode(AIN1, OUTPUT); pinMode(AIN2, OUTPUT); pinMode(PWMA, OUTPUT);
   pinMode(BIN1, OUTPUT); pinMode(BIN2, OUTPUT); pinMode(PWMB, OUTPUT);
@@ -161,51 +182,141 @@ void setup() {
 
   Serial.begin(9600);
 
-  for (int i = 0; i < 6; i++) {
-    pos[i] = SLIDER_CENTER;
-    raw[i] = SLIDER_CENTER;
-    target[i] = SLIDER_CENTER;
-  }
-
-  startupTime = millis();
+  posAFiltered = analogRead(POT1_PIN);
+  posBFiltered = analogRead(POT2_PIN);
+  posCFiltered = analogRead(POT3_PIN);
+  posDFiltered = analogRead(POT4_PIN);
+  posEFiltered = analogRead(POT5_PIN);
+  posFFiltered = analogRead(POT6_PIN);
 }
 
-// ---------- LOOP ----------
+/* =========================================================
+   LOOP
+   ========================================================= */
 void loop() {
-  parseSerial();
+  unsigned long now = millis();
 
-  // Read pots
-  raw[0] = constrain(analogRead(POT1_PIN), THRESHOLD_BOTTOM, THRESHOLD_TOP);
-  raw[1] = constrain(analogRead(POT2_PIN), THRESHOLD_BOTTOM, THRESHOLD_TOP);
-  raw[2] = constrain(analogRead(POT3_PIN), THRESHOLD_BOTTOM, THRESHOLD_TOP);
-  raw[3] = constrain(analogRead(POT4_PIN), THRESHOLD_BOTTOM, THRESHOLD_TOP);
-  raw[4] = constrain(analogRead(POT5_PIN), THRESHOLD_BOTTOM, THRESHOLD_TOP);
-  raw[5] = constrain(analogRead(POT6_PIN), THRESHOLD_BOTTOM, THRESHOLD_TOP);
+  int rawA = constrain(analogRead(POT1_PIN), THRESHOLD_BOTTOM, THRESHOLD_TOP);
+  int rawB = constrain(analogRead(POT2_PIN), THRESHOLD_BOTTOM, THRESHOLD_TOP);
+  int rawC = constrain(analogRead(POT3_PIN), THRESHOLD_BOTTOM, THRESHOLD_TOP);
+  int rawD = constrain(analogRead(POT4_PIN), THRESHOLD_BOTTOM, THRESHOLD_TOP);
+  int rawE = constrain(analogRead(POT5_PIN), THRESHOLD_BOTTOM, THRESHOLD_TOP);
+  int rawF = constrain(analogRead(POT6_PIN), THRESHOLD_BOTTOM, THRESHOLD_TOP);
 
-  for (int i = 0; i < 6; i++) {
-    pos[i] = lowPassFilter(raw[i], pos[i]);
+  /* ---- Hand detection ---- */
+  bool humanMoveA = abs(rawA - posAFiltered) > HAND_THRESHOLD;
+  bool humanMoveB = abs(rawB - posBFiltered) > HAND_THRESHOLD;
+  bool humanMoveC = abs(rawC - posCFiltered) > HAND_THRESHOLD;
+  bool humanMoveD = abs(rawD - posDFiltered) > HAND_THRESHOLD;
+  bool humanMoveE = abs(rawE - posEFiltered) > HAND_THRESHOLD;
+  bool humanMoveF = abs(rawF - posFFiltered) > HAND_THRESHOLD;
+
+  /* ---- Master selection ---- */
+  if (humanMoveA && !humanMoveB && !humanMoveC && !humanMoveD && !humanMoveE && !humanMoveF) masterSlider = 1;
+  else if (humanMoveB && !humanMoveA && !humanMoveC && !humanMoveD && !humanMoveE && !humanMoveF) masterSlider = 2;
+  else if (humanMoveC && !humanMoveA && !humanMoveB && !humanMoveD && !humanMoveE && !humanMoveF) masterSlider = 3;
+  else if (humanMoveD && !humanMoveA && !humanMoveB && !humanMoveC && !humanMoveE && !humanMoveF) masterSlider = 4;
+  else if (humanMoveE && !humanMoveA && !humanMoveB && !humanMoveC && !humanMoveD && !humanMoveF) masterSlider = 5;
+  else if (humanMoveF && !humanMoveA && !humanMoveB && !humanMoveC && !humanMoveD && !humanMoveE) masterSlider = 6;
+
+  /* ---- Filtering ---- */
+  posAFiltered = lowPassFilter(rawA, posAFiltered);
+  posBFiltered = lowPassFilter(rawB, posBFiltered);
+  posCFiltered = lowPassFilter(rawC, posCFiltered);
+  posDFiltered = lowPassFilter(rawD, posDFiltered);
+  posEFiltered = lowPassFilter(rawE, posEFiltered);
+  posFFiltered = lowPassFilter(rawF, posFFiltered);
+
+  /* ---- Motor follow logic ---- */
+  if (now - lastFollowTime >= FOLLOW_INTERVAL) {
+    lastFollowTime = now;
+
+    switch (masterSlider) {
+      case 1:
+        driveMotor(posBFiltered, rawA, BIN1, BIN2, PWMB, true);
+        driveMotor(posCFiltered, rawA, CIN1, CIN2, PWMC, true);
+        driveMotor(posDFiltered, rawA, DIN1, DIN2, PWMD, true);
+        driveMotor(posEFiltered, rawA, EIN1, EIN2, PWME, true);
+        driveMotor(posFFiltered, rawA, FIN1, FIN2, PWMF, true);
+        analogWrite(PWMA, 0);
+        break;
+
+      case 2:
+        driveMotor(posAFiltered, rawB, AIN1, AIN2, PWMA, true);
+        driveMotor(posCFiltered, rawB, CIN1, CIN2, PWMC, true);
+        driveMotor(posDFiltered, rawB, DIN1, DIN2, PWMD, true);
+        driveMotor(posEFiltered, rawB, EIN1, EIN2, PWME, true);
+        driveMotor(posFFiltered, rawB, FIN1, FIN2, PWMF, true);
+        analogWrite(PWMB, 0);
+        break;
+
+      case 3:
+        driveMotor(posAFiltered, rawC, AIN1, AIN2, PWMA, true);
+        driveMotor(posBFiltered, rawC, BIN1, BIN2, PWMB, true);
+        driveMotor(posDFiltered, rawC, DIN1, DIN2, PWMD, true);
+        driveMotor(posEFiltered, rawC, EIN1, EIN2, PWME, true);
+        driveMotor(posFFiltered, rawC, FIN1, FIN2, PWMF, true);
+        analogWrite(PWMC, 0);
+        break;
+
+      case 4:
+        driveMotor(posAFiltered, rawD, AIN1, AIN2, PWMA, true);
+        driveMotor(posBFiltered, rawD, BIN1, BIN2, PWMB, true);
+        driveMotor(posCFiltered, rawD, CIN1, CIN2, PWMC, true);
+        driveMotor(posEFiltered, rawD, EIN1, EIN2, PWME, true);
+        driveMotor(posFFiltered, rawD, FIN1, FIN2, PWMF, true);
+        analogWrite(PWMD, 0);
+        break;
+
+      case 5:
+        driveMotor(posAFiltered, rawE, AIN1, AIN2, PWMA, true);
+        driveMotor(posBFiltered, rawE, BIN1, BIN2, PWMB, true);
+        driveMotor(posCFiltered, rawE, CIN1, CIN2, PWMC, true);
+        driveMotor(posDFiltered, rawE, DIN1, DIN2, PWMD, true);
+        driveMotor(posFFiltered, rawE, FIN1, FIN2, PWMF, true);
+        analogWrite(PWME, 0);
+        break;
+
+      case 6:
+        driveMotor(posAFiltered, rawF, AIN1, AIN2, PWMA, true);
+        driveMotor(posBFiltered, rawF, BIN1, BIN2, PWMB, true);
+        driveMotor(posCFiltered, rawF, CIN1, CIN2, PWMC, true);
+        driveMotor(posDFiltered, rawF, DIN1, DIN2, PWMD, true);
+        driveMotor(posEFiltered, rawF, EIN1, EIN2, PWME, true);
+        analogWrite(PWMF, 0);
+        break;
+
+      default:
+        analogWrite(PWMA, 0);
+        analogWrite(PWMB, 0);
+        analogWrite(PWMC, 0);
+        analogWrite(PWMD, 0);
+        analogWrite(PWME, 0);
+        analogWrite(PWMF, 0);
+        break;
+    }
   }
 
-  // Send startup buttons after 5 seconds
-  if (!startupButtonsSent && millis() - startupTime >= 5000) {
-    buttonState[0] = 1;
-    buttonState[1] = 1;
+  /* ---- Controller mapping ---- */
+  ctrl1.slider[0] = map(rawA, THRESHOLD_BOTTOM, THRESHOLD_TOP, 0, 255);
+  ctrl1.slider[1] = map(rawB, THRESHOLD_BOTTOM, THRESHOLD_TOP, 0, 255);
+  ctrl1.slider[2] = map(rawC, THRESHOLD_BOTTOM, THRESHOLD_TOP, 0, 255);
 
-    sendButtonPacket(0, 1);
-    sendButtonPacket(1, 1);
+  ctrl2.slider[0] = map(rawD, THRESHOLD_BOTTOM, THRESHOLD_TOP, 0, 255);
+  ctrl2.slider[1] = map(rawE, THRESHOLD_BOTTOM, THRESHOLD_TOP, 0, 255);
+  ctrl2.slider[2] = map(rawF, THRESHOLD_BOTTOM, THRESHOLD_TOP, 0, 255);
 
-    startupButtonsSent = true;
+  /* ---- Send packets on change ---- */
+  if (hasChanged(ctrl1, lastSent1)) {
+    sendControlPacket(ctrl1);
+    copyControls(ctrl1, lastSent1);
   }
 
-  if (millis() - lastFollowTime >= FOLLOW_INTERVAL) {
-    lastFollowTime = millis();
-
-    driveMotor(pos[0], target[0], AIN1, AIN2, PWMA, true);
-    driveMotor(pos[1], target[1], BIN1, BIN2, PWMB, true);
-    driveMotor(pos[2], target[2], CIN1, CIN2, PWMC, true);
-    driveMotor(pos[3], target[3], DIN1, DIN2, PWMD, true);
-    driveMotor(pos[4], target[4], EIN1, EIN2, PWME, true);
-    driveMotor(pos[5], target[5], FIN1, FIN2, PWMF, true);
+  if (hasChanged(ctrl2, lastSent2)) {
+    sendControlPacket(ctrl2);
+    copyControls(ctrl2, lastSent2);
   }
+
+  delay(20);
 }
 
